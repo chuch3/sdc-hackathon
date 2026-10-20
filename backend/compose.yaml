@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/data/inventory.db
+      BUSINESS_TIMEZONE: Asia/Kuala_Lumpur
+    volumes:
+      - inventory_data:/app/data
+volumes:
+  inventory_data:

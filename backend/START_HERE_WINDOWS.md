@@ -1,6 +1,6 @@
 # Open this project on Windows
 
-1. Open https://github.com/nicho-mt/Repo2/tree/m1-backend-starter and sign in if needed.
+1. Open https://github.com/chuch3/sdc-hackathon/tree/m1-backend/backend and sign in if needed.
 2. Click **Code -> Download ZIP**.
 3. In Downloads, right-click the ZIP and choose **Extract All**.
 4. Open the extracted folder containing `START_WINDOWS.cmd`, `README.md`, and `app`.

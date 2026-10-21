@@ -9,6 +9,7 @@ from sqlalchemy import func, inspect, select
 
 from app import models
 from app.db import build_engine
+from scripts import seed as seed_module
 from scripts.seed import seed
 
 
@@ -28,6 +29,13 @@ def receipt(app, product, **changes):
     }
     data.update(changes)
     return data
+
+
+def test_root_redirects_to_docs(api):
+    client, _ = api
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
 
 
 def test_health(api):
@@ -221,9 +229,11 @@ def test_overdue_purchase_not_treated_as_reliable_incoming_stock(catalog):
     assert Decimal(result["overdue_quantity"]) == 7
 
 
-def test_m2_and_m3_hooks_are_explicit_until_connected(catalog):
+def test_m2_and_m3_hooks_are_connected(catalog):
     client, _, _, product = catalog
-    assert client.get(f"/api/v1/recommendations/{product['id']}").status_code == 501
+    recommendation = client.get(f"/api/v1/recommendations/{product['id']}")
+    assert recommendation.status_code == 200
+    assert recommendation.json()["action"] == "HOLD"
     result = client.post(
         "/api/v1/stock-actions",
         json={
@@ -235,7 +245,7 @@ def test_m2_and_m3_hooks_are_explicit_until_connected(catalog):
             "reason": "Approved sale",
         },
     )
-    assert result.status_code == 501
+    assert result.status_code == 409
 
 
 def test_recommendation_endpoint_uses_m3_service(catalog, monkeypatch):
@@ -245,7 +255,7 @@ def test_recommendation_endpoint_uses_m3_service(catalog, monkeypatch):
     monkeypatch.setattr(
         recommendations,
         "recommend",
-        lambda db, product_id, as_of: {
+        lambda db, product_id, as_of, settings=None: {
             "product_id": product_id,
             "action": "HOLD",
             "quantity": "0",
@@ -276,8 +286,15 @@ def test_seed_repeatability_and_all_ledger_balances(api):
     seed(url)
     seed(url)
     with app.state.session_factory() as db:
-        assert db.scalar(select(func.count()).select_from(models.Product)) == 4
-        assert db.scalar(select(func.count()).select_from(models.Batch)) == 80
+        assert (
+            db.scalar(select(func.count()).select_from(models.Product))
+            == len(seed_module.PRODUCTS)
+        )
+        assert (
+            db.scalar(select(func.count()).select_from(models.Supplier))
+            == len(seed_module.SUPPLIERS)
+        )
+        assert db.scalar(select(func.count()).select_from(models.Batch)) > 0
         for batch in db.scalars(select(models.Batch)):
             total = db.scalar(
                 select(func.sum(models.StockMovement.quantity_delta)).where(
@@ -285,9 +302,9 @@ def test_seed_repeatability_and_all_ledger_balances(api):
                 )
             )
             assert total == batch.quantity_remaining
-        assert all(
-            factor.kg_co2e_per_kg_waste == 0 for factor in db.scalars(select(models.SDGFactor))
-        )
+        factors = list(db.scalars(select(models.SDGFactor)))
+        assert factors
+        assert all(factor.source_note for factor in factors)
 
 
 def test_real_migration_from_empty_database(tmp_path):

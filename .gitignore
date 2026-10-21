@@ -1,0 +1,13 @@
+.env
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/*.db
+data/outbox/
+data/smoke/
+mlruns/
+forecast/artifacts/
+*.pt
+*.pth

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -19,6 +19,10 @@ def create_app(database_url: str | None = None):
     application.state.settings = settings
     application.state.engine = engine
     application.state.session_factory = session_factory(engine)
+
+    @application.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse("/docs")
 
     @application.get("/health", tags=["Setup"])
     def health():

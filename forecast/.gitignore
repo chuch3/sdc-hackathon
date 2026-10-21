@@ -1,0 +1,5 @@
+artifacts/
+mlruns/
+mlflow.db
+*.pt
+*.pth

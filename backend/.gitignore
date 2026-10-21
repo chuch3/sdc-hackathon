@@ -7,3 +7,5 @@ __pycache__/
 data/*.db
 data/*.db-*
 *.egg-info/
+data/smoke/
+data/outbox/

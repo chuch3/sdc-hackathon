@@ -6,8 +6,54 @@ from app.db import commit
 from app.services.common import add_event, require_approver
 
 
+def create_batch_with_receipt(
+    db,
+    *,
+    product_id: int,
+    batch_code: str,
+    quantity_received,
+    received_date,
+    expiry_date,
+    baked_date=None,
+    unit_cost=None,
+    actor_name: str,
+    reason: str,
+    request_id: str | None = None,
+    stock_action_id: int | None = None,
+    commit_now: bool = False,
+):
+    batch = models.Batch(
+        product_id=product_id,
+        batch_code=batch_code,
+        quantity_received=quantity_received,
+        quantity_remaining=quantity_received,
+        received_date=received_date,
+        baked_date=baked_date,
+        expiry_date=expiry_date,
+        unit_cost=unit_cost if unit_cost is not None else 0,
+    )
+    db.add(batch)
+    db.flush()
+    db.add(
+        models.StockMovement(
+            product_id=batch.product_id,
+            batch_id=batch.id,
+            movement_type="RECEIPT",
+            quantity_delta=batch.quantity_received,
+            reason=reason,
+            actor_name=actor_name,
+            request_id=request_id,
+            stock_action_id=stock_action_id,
+        )
+    )
+    if commit_now:
+        commit(db)
+        db.refresh(batch)
+    return batch
+
+
 def receive_batch(db, body):
-    """Atomic, idempotent opening receipt. M2 can extend this service later."""
+    """Atomic, idempotent opening receipt. M2 extends this service."""
     require_approver(body)
     product = db.get(models.Product, body.product_id)
     if not product or not product.active:
@@ -23,24 +69,23 @@ def receive_batch(db, body):
         ):
             raise HTTPException(status_code=409, detail="request_id was used for different data")
         return batch
-    batch = models.Batch(**fields, quantity_remaining=body.quantity_received)
-    db.add(batch)
     try:
-        db.flush()
+        batch = create_batch_with_receipt(
+            db,
+            product_id=body.product_id,
+            batch_code=body.batch_code,
+            quantity_received=body.quantity_received,
+            received_date=body.received_date,
+            expiry_date=body.expiry_date,
+            baked_date=body.baked_date,
+            unit_cost=body.unit_cost,
+            actor_name=body.actor_name,
+            reason=body.reason,
+            request_id=body.request_id,
+        )
     except Exception:
         db.rollback()
         raise
-    db.add(
-        models.StockMovement(
-            product_id=batch.product_id,
-            batch_id=batch.id,
-            movement_type="RECEIPT",
-            quantity_delta=batch.quantity_received,
-            reason=body.reason,
-            actor_name=body.actor_name,
-            request_id=body.request_id,
-        )
-    )
     add_event(db, "BATCH_RECEIVED", "batch", batch.id, body)
     commit(db)
     db.refresh(batch)

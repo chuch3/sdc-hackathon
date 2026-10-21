@@ -28,6 +28,9 @@ class Product(Base):
         CheckConstraint("shelf_life_days > 0"),
         CheckConstraint("lead_time_days >= 0"),
         CheckConstraint("moq > 0"),
+        CheckConstraint("case_size > 0"),
+        CheckConstraint("review_period_days >= 0"),
+        CheckConstraint("service_level >= 0.5 AND service_level <= 0.999"),
         CheckConstraint("safety_stock_days >= 0"),
         CheckConstraint("domain IN ('generic', 'bakery')"),
     )
@@ -41,6 +44,9 @@ class Product(Base):
     supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"), index=True)
     lead_time_days: Mapped[int] = mapped_column(default=2)
     moq: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("1"))
+    case_size: Mapped[int] = mapped_column(default=1)
+    review_period_days: Mapped[int] = mapped_column(default=1)
+    service_level: Mapped[Decimal] = mapped_column(Numeric(4, 3), default=Decimal("0.950"))
     safety_stock_days: Mapped[Decimal] = mapped_column(Numeric(8, 3), default=Decimal("1"))
     allergens: Mapped[list] = mapped_column(JSON, default=list)
     seasonal: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -90,6 +96,41 @@ class StockMovement(Base):
     reason: Mapped[str] = mapped_column(String(300))
     actor_name: Mapped[str] = mapped_column(String(100), default="Demo Owner")
     request_id: Mapped[str | None] = mapped_column(String(100), unique=True)
+    stock_action_id: Mapped[int | None] = mapped_column(index=True)
+
+
+class StockActionRequest(Base):
+    __tablename__ = "stock_action_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "request_type IN ('STOCK_ACTION','ADJUSTMENT','PO_RECEIPT')"
+        ),
+        CheckConstraint("status IN ('APPLIED')"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    request_id: Mapped[str] = mapped_column(String(100), unique=True)
+    request_type: Mapped[str] = mapped_column(String(20))
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"), index=True)
+    purchase_order_id: Mapped[int | None] = mapped_column(ForeignKey("purchase_orders.id"))
+    canonical_hash: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default="APPLIED")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+
+
+class StockoutEvent(Base):
+    __tablename__ = "stockout_events"
+    __table_args__ = (Index("ix_stockout_product_date", "product_id", "business_date"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    business_date: Mapped[date] = mapped_column(Date)
+    daypart: Mapped[str | None] = mapped_column(String(20))
+    requested_quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("0"))
+    available_quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("0"))
+    source: Mapped[str] = mapped_column(String(40), default="SALE_REJECTED")
+    note: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class PurchaseOrder(Base):
@@ -105,6 +146,7 @@ class PurchaseOrder(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
     approved_by: Mapped[str | None] = mapped_column(String(100))
     approved_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    received_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     lines: Mapped[list["PurchaseOrderLine"]] = relationship(
         back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
@@ -162,6 +204,7 @@ class SeasonalIngredient(Base):
 class ProductionPlan(Base):
     __tablename__ = "production_plans"
     __table_args__ = (
+        CheckConstraint("status IN ('DRAFT','APPROVED','DONE','CANCELLED')"),
         Index("uq_production_slot", "plan_date", "product_id", "daypart", unique=True),
     )
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -172,6 +215,9 @@ class ProductionPlan(Base):
     actual_baked: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("0"))
     sold: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("0"))
     discarded: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("0"))
+    status: Mapped[str] = mapped_column(String(20), default="DRAFT")
+    approved_by: Mapped[str | None] = mapped_column(String(100))
+    approved_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
 
 class HolidayCalendar(Base):

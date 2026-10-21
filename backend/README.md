@@ -32,6 +32,10 @@ The five words you need first:
 - Batch quarantine/reactivation with a recorded reason.
 - Read-only movement and activity history.
 - Purchase-order drafts, human-approved status, cancellation, and on-order quantities.
+- A shared, pure FEFO allocator (`app/services/allocation.py`) used by the stock-action
+  service and by the weekly planner.
+- A read-only weekly planner (`GET /api/v1/planner/week`) that projects seven days of
+  stock, arrivals, and action cards.
 - Inventory CSV export, relevant database indexes, and OpenAPI export.
 - Repeatable fictional seed data and automated tests.
 - Optional container configuration, architecture notes, and teammate contracts.
@@ -40,14 +44,13 @@ The five words you need first:
 
 | Owner | Remaining work / connection point |
 |---|---|
-| M2 | FEFO sale/waste/donation actions, adjustments, expiry buckets and safe action rules. Replace `app/services/stock_actions.py`; extend the existing receipt service if needed. |
-| M3 | Forecasts, reorder calculations, confidence, and SDG metrics. Replace `app/services/recommendations.py`. |
-| M4 | Bakery strategy/policies, bakery endpoints, bake plans, seasonal advice. Bakery tables are included as a starting agreement, not completed business logic. |
-| M5 | Streamlit screens, HTTP client, full-team QA, slides and demonstration. |
+| M2 | FEFO sale/waste/donation actions, adjustments, expiry buckets, and safe action rules are implemented in `app/services/stock_actions.py` and `inventory.py`. |
+| M3 | Forecasts, reorder calculations, confidence, and impact estimates are connected through `app/services/recommendations.py` and `forecast_repository.py`. |
+| M4 | Bakery profiles, bake-plan draft/approval, seasonal advice, and holiday calendars are implemented. |
+| M5 | Streamlit screens and the HTTP client live in `dashboard/`. |
 
-The M2/M3 endpoints return **501 Not Implemented** until the relevant service is connected.
-They do not invent successful sales or recommendations. Authentication is intentionally absent;
-the actor-role fields are a simulation for the local prototype.
+Authentication is intentionally absent; the actor-role fields are a simulation for the local
+prototype. Expired stock can never be sold. Estimates are labelled as estimates.
 
 ## Step 1: install/check your tools (Windows)
 
@@ -139,9 +142,10 @@ Use Alembic for future shared schema changes; restarting FastAPI does not migrat
 .\.venv\Scripts\python.exe -m scripts.seed
 ```
 
-Expected: 3 suppliers, 4 products, 80 batches, and 35 days of synthetic transaction history.
-Most historical batches are closed; current examples include near-expiry, expired and
-quarantined stock. Every batch quantity reconciles to its ledger.
+Expected: 8 suppliers, 16 products, 6 purchase orders in every workflow state, 6 holiday
+entries, 10 seasonal ingredients, and 42 days of synthetic transaction history. Most historical
+batches are closed; current examples include near-expiry, expired and quarantined stock. Every
+batch quantity reconciles to its ledger.
 
 Running seed again prints `Demo data already loaded; nothing changed.` It does not reset stock.
 Dates are relative to the current Kuala Lumpur business date. A fixed test date is optional:
@@ -151,8 +155,9 @@ Dates are relative to the current Kuala Lumpur business date. A fixed test date 
 ```
 
 Use a new empty demo database for a different seed date. M3 can extend the history generator.
-The SDG factors are explicitly zero-valued placeholders; M3 must add documented factors
-and weight conversions before reporting estimated environmental impact.
+The SDG factors are illustrative placeholders taken from published food-category life-cycle
+studies; the dashboard labels them as estimates and shows their provenance. Replace them with
+measured local values before quoting any figure.
 
 ## Step 7: start your API
 
@@ -411,7 +416,8 @@ Container execution depends on your Docker installation; the ordinary Python set
 | 422 response | Read the response's `detail`; check required fields, numeric values and date format `YYYY-MM-DD`. |
 | 409 response | Check duplicate SKU, batch code or request ID, or a disallowed state transition. |
 | 403 response | The simulated actor role cannot approve that action. |
-| 501 on stock-actions or recommendations | The M2 or M3 service is intentionally not connected yet. |
+| API available but a screen is empty | Run the seed command against the same `DATABASE_URL`. |
+| `FORECAST_PACKAGE_ROOT` error | Run from the repository root, or set it to the directory containing `forecast/`. |
 | Address/port already in use | Stop the earlier Uvicorn terminal with Ctrl+C. Alternatively use `--port 8001` and update the UI's API base. |
 | SQLite database locked | Stop duplicate writers, keep transactions short, and ask M2 to review transaction boundaries. |
 | A teammate's `localhost` cannot reach your API | Run both services on one demo laptop, or each member runs their own backend copy. |

@@ -10,8 +10,16 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.db import commit, get_db, utc_now
-from app.services import recommendations, stock_actions
-from app.services.common import add_event, require_approver
+from app.services import (
+    analytics,
+    bakery,
+    inventory,
+    purchasing,
+    recommendations,
+    stock_actions,
+    weekly_planner,
+)
+from app.services.common import add_event, require_approver, require_stock_actor
 from app.services.receipts import receive_batch
 
 router = APIRouter(prefix="/api/v1")
@@ -121,13 +129,23 @@ def archive_product(product_id: int, db: DB):
 
 @router.get("/batches", response_model=list[schemas.BatchOutput], tags=["Batches"])
 def list_batches(
-    db: DB, product_id: int | None = None, offset: int = Query(0, ge=0), limit: Limit = 100
+    db: DB,
+    request: Request,
+    product_id: int | None = None,
+    status: str | None = None,
+    include_empty: bool = False,
+    offset: int = Query(0, ge=0),
+    limit: Limit = 100,
 ):
     query = select(models.Batch).order_by(
         models.Batch.expiry_date, models.Batch.received_date, models.Batch.id
     )
     if product_id is not None:
         query = query.where(models.Batch.product_id == product_id)
+    if status is not None:
+        query = query.where(models.Batch.status == status)
+    if not include_empty:
+        query = query.where(models.Batch.quantity_remaining > 0)
     return db.scalars(query.offset(offset).limit(limit)).all()
 
 
@@ -173,16 +191,48 @@ def list_movements(
     return db.scalars(query.offset(offset).limit(limit)).all()
 
 
-@router.post("/stock-actions", tags=["M2 integration"])
+@router.post(
+    "/stock-actions",
+    response_model=schemas.StockActionOutput,
+    status_code=201,
+    tags=["Inventory"],
+)
 def create_stock_action(body: schemas.StockActionInput, db: DB, request: Request):
+    require_stock_actor(body, body.movement_type)
+    find(db, models.Product, body.product_id)
+    return stock_actions.apply_stock_action(
+        db, body, request.app.state.settings.business_today()
+    )
+
+
+@router.post(
+    "/stock-adjustments",
+    response_model=schemas.StockActionOutput,
+    status_code=201,
+    tags=["Inventory"],
+)
+def create_stock_adjustment(body: schemas.StockAdjustmentInput, db: DB, request: Request):
     require_approver(body)
     find(db, models.Product, body.product_id)
-    try:
-        return stock_actions.apply_stock_action(
-            db, body, request.app.state.settings.business_today()
+    return stock_actions.apply_adjustment(
+        db, body, request.app.state.settings.business_today()
+    )
+
+
+@router.get(
+    "/stock-actions/{request_id}",
+    response_model=schemas.StockActionOutput,
+    tags=["Inventory"],
+)
+def get_stock_action(request_id: str, db: DB):
+    record = db.scalar(
+        select(models.StockActionRequest).where(
+            models.StockActionRequest.request_id == request_id
         )
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Stock request not found")
+    return record.result
 
 
 @router.post(
@@ -208,6 +258,18 @@ def create_purchase_order(body: schemas.PurchaseOrderInput, db: DB):
 )
 def list_purchase_orders(db: DB):
     return db.scalars(select(models.PurchaseOrder).order_by(models.PurchaseOrder.id)).all()
+
+
+@router.post(
+    "/purchase-orders/{order_id}/receive",
+    response_model=schemas.PurchaseReceiptOutput,
+    status_code=201,
+    tags=["Purchasing"],
+)
+def receive_purchase_order(
+    order_id: int, body: schemas.PurchaseReceiptInput, db: DB
+):
+    return purchasing.receive_purchase_order(db, order_id, body)
 
 
 @router.get(
@@ -288,16 +350,313 @@ def on_order(product_id: int, db: DB, request: Request, through: date | None = N
 
 
 @router.get(
-    "/recommendations/{product_id}", response_model=schemas.Recommendation, tags=["M3 integration"]
+    "/recommendations",
+    response_model=schemas.RecommendationList,
+    tags=["Forecast"],
+)
+def recommendations_list(
+    db: DB,
+    request: Request,
+    domain: str | None = None,
+    as_of: date | None = None,
+):
+    today = request.app.state.settings.business_today()
+    if as_of is not None and as_of > today:
+        raise HTTPException(status_code=422, detail="as_of cannot be in the future")
+    selected = as_of or today
+    items = recommendations.recommend_all(
+        db, selected, request.app.state.settings, domain=domain
+    )
+    return {
+        "as_of": selected,
+        "engine": request.app.state.settings.forecast_engine,
+        "recommendations": items,
+    }
+
+
+@router.post("/recommendations/{product_id}/decision", tags=["Forecast"])
+def decide_recommendation(
+    product_id: int, body: schemas.RecommendationDecisionInput, db: DB
+):
+    find(db, models.Product, product_id)
+    add_event(
+        db,
+        f"RECOMMENDATION_{body.decision}",
+        "product",
+        product_id,
+        body,
+        {
+            "action": body.action,
+            "quantity": str(body.quantity),
+            "edited_quantity": None
+            if body.edited_quantity is None
+            else str(body.edited_quantity),
+            "note": body.note,
+        },
+    )
+    commit(db)
+    return {"product_id": product_id, "decision": body.decision}
+
+
+@router.get(
+    "/recommendations/{product_id}",
+    response_model=schemas.Recommendation,
+    tags=["Forecast"],
 )
 def recommendation(product_id: int, db: DB, request: Request):
     find(db, models.Product, product_id)
     try:
         return recommendations.recommend(
-            db, product_id, request.app.state.settings.business_today()
+            db,
+            product_id,
+            request.app.state.settings.business_today(),
+            request.app.state.settings,
         )
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/inventory/positions",
+    response_model=list[schemas.InventoryPositionOutput],
+    tags=["Inventory"],
+)
+def inventory_positions(db: DB, request: Request, as_of: date | None = None):
+    today = request.app.state.settings.business_today()
+    selected = as_of or today
+    if selected > today:
+        raise HTTPException(status_code=422, detail="as_of cannot be in the future")
+    return inventory.inventory_positions(db, selected)
+
+
+@router.get(
+    "/expiry/buckets",
+    response_model=schemas.ExpiryBucketOutput,
+    tags=["Expiry"],
+)
+def expiry_buckets(db: DB, request: Request, as_of: date | None = None):
+    today = request.app.state.settings.business_today()
+    selected = as_of or today
+    if selected > today:
+        raise HTTPException(status_code=422, detail="as_of cannot be in the future")
+    items = inventory.expiry_items(db, selected)
+    totals = inventory.bucket_totals(items)
+    value_at_risk = sum(
+        (item["value"] for item in items if item["bucket"] in {"expired", "critical", "warning"}),
+        Decimal("0"),
+    )
+    return {
+        "as_of": selected,
+        "totals": {key: str(value) for key, value in totals.items()},
+        "value_at_risk": value_at_risk,
+        "items": items,
+    }
+
+
+@router.get(
+    "/expiry/alerts",
+    response_model=schemas.ExpiryAlertOutput,
+    tags=["Expiry"],
+)
+def expiry_alerts(
+    db: DB,
+    request: Request,
+    as_of: date | None = None,
+    horizon_days: int = Query(3, ge=0, le=60),
+):
+    today = request.app.state.settings.business_today()
+    selected = as_of or today
+    if selected > today:
+        raise HTTPException(status_code=422, detail="as_of cannot be in the future")
+    items = [
+        item
+        for item in inventory.expiry_items(db, selected)
+        if item["days_to_expiry"] <= horizon_days
+    ]
+    return {"as_of": selected, "horizon_days": horizon_days, "alerts": items}
+
+
+@router.post("/expiry/scan", tags=["Expiry"])
+def expiry_scan(db: DB, request: Request):
+    today = request.app.state.settings.business_today()
+    items = inventory.expiry_items(db, today)
+    totals = inventory.bucket_totals(items)
+    payload = {
+        "as_of": today.isoformat(),
+        "bucket_quantities": {key: str(value) for key, value in totals.items()},
+        "value_at_risk": str(
+            sum(
+                (
+                    item["value"]
+                    for item in items
+                    if item["bucket"] in {"expired", "critical", "warning"}
+                ),
+                Decimal("0"),
+            )
+        ),
+        "batches": len(items),
+    }
+    event = stock_actions.record_expiry_scan(db, today, payload)
+    return {"event_id": event.id, **payload}
+
+
+@router.get("/integrations/orbyte", tags=["Integrations"])
+def orbyte_status(request: Request):
+    settings = request.app.state.settings
+    return {
+        "configured": bool(settings.orbyte_base_url),
+        "mode": "embed / identity / approval" if settings.orbyte_base_url else "not configured",
+        "note": (
+            "Orbyte is an HR/leave portal. Inventory data stays in this API; "
+            "Orbyte can pass actor context or host the dashboard."
+        ),
+    }
+
+
+@router.get("/bakery/profiles", tags=["Bakery"])
+def bakery_profiles(db: DB):
+    rows = db.scalars(select(models.BreadProfile).order_by(models.BreadProfile.product_id)).all()
+    return [
+        {
+            "product_id": row.product_id,
+            "weekday_factors": row.weekday_factors,
+            "daypart_shares": row.daypart_shares,
+            "max_daily_quantity": row.max_daily_quantity,
+        }
+        for row in rows
+    ]
+
+
+@router.put(
+    "/bakery/profiles/{product_id}",
+    response_model=schemas.BreadProfileOutput,
+    tags=["Bakery"],
+)
+def upsert_bakery_profile(
+    product_id: int, body: schemas.BreadProfileInput, db: DB
+):
+    product = find(db, models.Product, product_id)
+    if product.domain != "bakery":
+        raise HTTPException(status_code=409, detail="Only bakery products have bread profiles")
+    profile = db.scalar(
+        select(models.BreadProfile).where(models.BreadProfile.product_id == product_id)
+    )
+    if profile is None:
+        profile = models.BreadProfile(product_id=product_id)
+        db.add(profile)
+    profile.weekday_factors = body.weekday_factors
+    profile.daypart_shares = body.daypart_shares
+    profile.max_daily_quantity = body.max_daily_quantity
+    commit(db)
+    return profile
+
+
+@router.get(
+    "/bakery/bake-plan",
+    response_model=list[schemas.BakePlanOutput],
+    tags=["Bakery"],
+)
+def get_bake_plan(
+    db: DB, request: Request, plan_date: date | None = None, product_id: int | None = None
+):
+    selected = plan_date or request.app.state.settings.business_today()
+    return bakery.build_bake_plan(
+        db, selected, request.app.state.settings, product_id=product_id
+    )
+
+
+@router.post(
+    "/bakery/bake-plan",
+    response_model=schemas.BakePlanOutput,
+    status_code=201,
+    tags=["Bakery"],
+)
+def create_bake_plan(body: schemas.BakePlanRequest, db: DB, request: Request):
+    plans = bakery.build_bake_plan(
+        db, body.plan_date, request.app.state.settings, product_id=body.product_id
+    )
+    if not plans:
+        raise HTTPException(status_code=404, detail="Bakery product not found")
+    return bakery.save_bake_plan(
+        db,
+        body.plan_date,
+        request.app.state.settings,
+        schemas.BakePlanOutput.model_validate(plans[0]),
+        body,
+    )
+
+
+@router.post("/bakery/bake-plan/{product_id}/approve", tags=["Bakery"])
+def approve_bake_plan(
+    product_id: int,
+    body: schemas.Actor,
+    db: DB,
+    request: Request,
+    plan_date: date | None = None,
+):
+    require_approver(body)
+    selected = plan_date or request.app.state.settings.business_today()
+    rows = bakery.approve_bake_plan(db, selected, product_id, body)
+    return {
+        "plan_date": selected,
+        "product_id": product_id,
+        "status": "APPROVED",
+        "slots": len(rows),
+    }
+
+
+@router.get(
+    "/bakery/seasonal-advice",
+    response_model=list[schemas.SeasonalAdvice],
+    tags=["Bakery"],
+)
+def seasonal_advice(db: DB, request: Request, on_date: date | None = None):
+    selected = on_date or request.app.state.settings.business_today()
+    return bakery.seasonal_advice(db, selected)
+
+
+@router.get(
+    "/planner/week", response_model=schemas.PlannerWeek, tags=["Planner"]
+)
+def planner_week(db: DB, request: Request, start: date | None = None, days: int = 7):
+    """Read-only seven-day projection of stock, orders, and actions."""
+    settings = request.app.state.settings
+    try:
+        return weekly_planner.build_week(
+            db,
+            as_of=settings.business_today(),
+            start=start,
+            days=days,
+            settings=settings,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/holidays", response_model=list[schemas.HolidayOutput], tags=["Bakery"])
+def list_holidays(db: DB):
+    return db.scalars(select(models.HolidayCalendar).order_by(models.HolidayCalendar.holiday_date)).all()
+
+@router.post(
+    "/holidays", response_model=schemas.HolidayOutput, status_code=201, tags=["Bakery"]
+)
+def create_holiday(body: schemas.HolidayInput, db: DB):
+    row = models.HolidayCalendar(**body.model_dump())
+    db.add(row)
+    commit(db)
+    return row
+
+
+@router.get("/analytics/impact", tags=["Impact"])
+def impact(db: DB, days: int = Query(30, ge=1, le=365)):
+    return analytics.impact_summary(db, days)
+
+
+@router.get("/analytics/activity-calendar", tags=["Impact"])
+def activity_calendar(db: DB, request: Request, days: int = Query(120, ge=7, le=400)):
+    """Daily activity buckets for the contribution-style calendar."""
+    settings = request.app.state.settings
+    return analytics.activity_calendar(db, settings.business_today(), days, settings)
 
 
 @router.get("/activity", tags=["Audit"])

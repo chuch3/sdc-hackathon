@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Perishable Food Inventory - M1 Backend",
+    "title": "FreshStock API",
     "description": "Synthetic-data demonstration backend. /docs is the interactive API tester.",
     "version": "0.1.0"
   },
@@ -495,6 +495,32 @@
             }
           },
           {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "include_empty",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Empty"
+            }
+          },
+          {
             "name": "offset",
             "in": "query",
             "required": false,
@@ -758,7 +784,7 @@
     "/api/v1/stock-actions": {
       "post": {
         "tags": [
-          "M2 integration"
+          "Inventory"
         ],
         "summary": "Create Stock Action",
         "operationId": "create_stock_action_api_v1_stock_actions_post",
@@ -773,11 +799,96 @@
           "required": true
         },
         "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockActionOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stock-adjustments": {
+      "post": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "Create Stock Adjustment",
+        "operationId": "create_stock_adjustment_api_v1_stock_adjustments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockAdjustmentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockActionOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stock-actions/{request_id}": {
+      "get": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "Get Stock Action",
+        "operationId": "get_stock_action_api_v1_stock_actions__request_id__get",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Request Id"
+            }
+          }
+        ],
+        "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StockActionOutput"
+                }
               }
             }
           },
@@ -841,6 +952,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PurchaseOrderOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/purchase-orders/{order_id}/receive": {
+      "post": {
+        "tags": [
+          "Purchasing"
+        ],
+        "summary": "Receive Purchase Order",
+        "operationId": "receive_purchase_order_api_v1_purchase_orders__order_id__receive_post",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseReceiptInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseReceiptOutput"
                 }
               }
             }
@@ -1063,10 +1226,126 @@
         }
       }
     },
+    "/api/v1/recommendations": {
+      "get": {
+        "tags": [
+          "Forecast"
+        ],
+        "summary": "Recommendations List",
+        "operationId": "recommendations_list_api_v1_recommendations_get",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recommendations/{product_id}/decision": {
+      "post": {
+        "tags": [
+          "Forecast"
+        ],
+        "summary": "Decide Recommendation",
+        "operationId": "decide_recommendation_api_v1_recommendations__product_id__decision_post",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationDecisionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recommendations/{product_id}": {
       "get": {
         "tags": [
-          "M3 integration"
+          "Forecast"
         ],
         "summary": "Recommendation",
         "operationId": "recommendation_api_v1_recommendations__product_id__get",
@@ -1089,6 +1368,723 @@
                 "schema": {
                   "$ref": "#/components/schemas/Recommendation"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/positions": {
+      "get": {
+        "tags": [
+          "Inventory"
+        ],
+        "summary": "Inventory Positions",
+        "operationId": "inventory_positions_api_v1_inventory_positions_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InventoryPositionOutput"
+                  },
+                  "title": "Response Inventory Positions Api V1 Inventory Positions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expiry/buckets": {
+      "get": {
+        "tags": [
+          "Expiry"
+        ],
+        "summary": "Expiry Buckets",
+        "operationId": "expiry_buckets_api_v1_expiry_buckets_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpiryBucketOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expiry/alerts": {
+      "get": {
+        "tags": [
+          "Expiry"
+        ],
+        "summary": "Expiry Alerts",
+        "operationId": "expiry_alerts_api_v1_expiry_alerts_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "name": "horizon_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 0,
+              "default": 3,
+              "title": "Horizon Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpiryAlertOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expiry/scan": {
+      "post": {
+        "tags": [
+          "Expiry"
+        ],
+        "summary": "Expiry Scan",
+        "operationId": "expiry_scan_api_v1_expiry_scan_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/orbyte": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Orbyte Status",
+        "operationId": "orbyte_status_api_v1_integrations_orbyte_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bakery/profiles": {
+      "get": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Bakery Profiles",
+        "operationId": "bakery_profiles_api_v1_bakery_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bakery/profiles/{product_id}": {
+      "put": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Upsert Bakery Profile",
+        "operationId": "upsert_bakery_profile_api_v1_bakery_profiles__product_id__put",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Product Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BreadProfileInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreadProfileOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bakery/bake-plan": {
+      "get": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Get Bake Plan",
+        "operationId": "get_bake_plan_api_v1_bakery_bake_plan_get",
+        "parameters": [
+          {
+            "name": "plan_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Plan Date"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BakePlanOutput"
+                  },
+                  "title": "Response Get Bake Plan Api V1 Bakery Bake Plan Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Create Bake Plan",
+        "operationId": "create_bake_plan_api_v1_bakery_bake_plan_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BakePlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BakePlanOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bakery/bake-plan/{product_id}/approve": {
+      "post": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Approve Bake Plan",
+        "operationId": "approve_bake_plan_api_v1_bakery_bake_plan__product_id__approve_post",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "plan_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Plan Date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Actor"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bakery/seasonal-advice": {
+      "get": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Seasonal Advice",
+        "operationId": "seasonal_advice_api_v1_bakery_seasonal_advice_get",
+        "parameters": [
+          {
+            "name": "on_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SeasonalAdvice"
+                  },
+                  "title": "Response Seasonal Advice Api V1 Bakery Seasonal Advice Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/planner/week": {
+      "get": {
+        "tags": [
+          "Planner"
+        ],
+        "summary": "Planner Week",
+        "description": "Read-only seven-day projection of stock, orders, and actions.",
+        "operationId": "planner_week_api_v1_planner_week_get",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlannerWeek"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/holidays": {
+      "get": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "List Holidays",
+        "operationId": "list_holidays_api_v1_holidays_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HolidayOutput"
+                  },
+                  "type": "array",
+                  "title": "Response List Holidays Api V1 Holidays Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Bakery"
+        ],
+        "summary": "Create Holiday",
+        "operationId": "create_holiday_api_v1_holidays_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/impact": {
+      "get": {
+        "tags": [
+          "Impact"
+        ],
+        "summary": "Impact",
+        "operationId": "impact_api_v1_analytics_impact_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/activity-calendar": {
+      "get": {
+        "tags": [
+          "Impact"
+        ],
+        "summary": "Activity Calendar",
+        "description": "Daily activity buckets for the contribution-style calendar.",
+        "operationId": "activity_calendar_api_v1_analytics_activity_calendar_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 400,
+              "minimum": 7,
+              "default": 120,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -1182,7 +2178,10 @@
             "type": "string",
             "enum": [
               "owner",
+              "manager",
               "bookkeeper",
+              "baker",
+              "staff",
               "viewer"
             ],
             "title": "Actor Role",
@@ -1203,6 +2202,136 @@
         ],
         "title": "Actor"
       },
+      "BakePlanOutput": {
+        "properties": {
+          "plan_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Plan Date"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "sku": {
+            "type": "string",
+            "title": "Sku"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "total_quantity": {
+            "type": "string",
+            "title": "Total Quantity"
+          },
+          "max_daily_quantity": {
+            "type": "string",
+            "title": "Max Daily Quantity"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/BakePlanSlot"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "approval_required": {
+            "type": "boolean",
+            "title": "Approval Required",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_date",
+          "product_id",
+          "sku",
+          "product_name",
+          "total_quantity",
+          "max_daily_quantity",
+          "slots",
+          "reason"
+        ],
+        "title": "BakePlanOutput"
+      },
+      "BakePlanRequest": {
+        "properties": {
+          "actor_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Actor Name"
+          },
+          "actor_role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "manager",
+              "bookkeeper",
+              "baker",
+              "staff",
+              "viewer"
+            ],
+            "title": "Actor Role",
+            "default": "owner"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "plan_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Plan Date"
+          },
+          "product_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Product Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "actor_name",
+          "reason",
+          "plan_date",
+          "product_id"
+        ],
+        "title": "BakePlanRequest"
+      },
+      "BakePlanSlot": {
+        "properties": {
+          "daypart": {
+            "type": "string",
+            "title": "Daypart"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "DRAFT"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "daypart",
+          "quantity"
+        ],
+        "title": "BakePlanSlot"
+      },
       "BatchInput": {
         "properties": {
           "actor_name": {
@@ -1215,7 +2344,10 @@
             "type": "string",
             "enum": [
               "owner",
+              "manager",
               "bookkeeper",
+              "baker",
+              "staff",
               "viewer"
             ],
             "title": "Actor Role",
@@ -1245,8 +2377,7 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)"
+                "type": "string"
               }
             ],
             "title": "Quantity Received"
@@ -1280,8 +2411,7 @@
                 "minimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+                "type": "string"
               }
             ],
             "title": "Unit Cost",
@@ -1324,12 +2454,10 @@
           },
           "quantity_received": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity Received"
           },
           "quantity_remaining": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity Remaining"
           },
           "received_date": {
@@ -1356,7 +2484,6 @@
           },
           "unit_cost": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unit Cost"
           },
           "status": {
@@ -1392,7 +2519,10 @@
             "type": "string",
             "enum": [
               "owner",
+              "manager",
               "bookkeeper",
+              "baker",
+              "staff",
               "viewer"
             ],
             "title": "Actor Role",
@@ -1422,6 +2552,215 @@
         ],
         "title": "BatchStatusInput"
       },
+      "BreadProfileInput": {
+        "properties": {
+          "weekday_factors": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Weekday Factors"
+          },
+          "daypart_shares": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Daypart Shares"
+          },
+          "max_daily_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Max Daily Quantity",
+            "default": "200"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BreadProfileInput"
+      },
+      "BreadProfileOutput": {
+        "properties": {
+          "weekday_factors": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Weekday Factors"
+          },
+          "daypart_shares": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Daypart Shares"
+          },
+          "max_daily_quantity": {
+            "type": "string",
+            "title": "Max Daily Quantity",
+            "default": "200"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id"
+        ],
+        "title": "BreadProfileOutput"
+      },
+      "ExpiryAlertOutput": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "horizon_days": {
+            "type": "integer",
+            "title": "Horizon Days"
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/ExpiryBucketItem"
+            },
+            "type": "array",
+            "title": "Alerts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of",
+          "horizon_days",
+          "alerts"
+        ],
+        "title": "ExpiryAlertOutput"
+      },
+      "ExpiryBucketItem": {
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "title": "Bucket"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "sku": {
+            "type": "string",
+            "title": "Sku"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "batch_id": {
+            "type": "integer",
+            "title": "Batch Id"
+          },
+          "batch_code": {
+            "type": "string",
+            "title": "Batch Code"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "unit_cost": {
+            "type": "string",
+            "title": "Unit Cost"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expiry Date"
+          },
+          "days_to_expiry": {
+            "type": "integer",
+            "title": "Days To Expiry"
+          },
+          "remaining_shelf_life_days": {
+            "type": "integer",
+            "title": "Remaining Shelf Life Days"
+          },
+          "allowed_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Actions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bucket",
+          "product_id",
+          "sku",
+          "name",
+          "batch_id",
+          "batch_code",
+          "quantity",
+          "unit_cost",
+          "value",
+          "expiry_date",
+          "days_to_expiry",
+          "remaining_shelf_life_days",
+          "allowed_actions"
+        ],
+        "title": "ExpiryBucketItem"
+      },
+      "ExpiryBucketOutput": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Totals"
+          },
+          "value_at_risk": {
+            "type": "string",
+            "title": "Value At Risk"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExpiryBucketItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of",
+          "totals",
+          "value_at_risk",
+          "items"
+        ],
+        "title": "ExpiryBucketOutput"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1434,6 +2773,168 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HolidayInput": {
+        "properties": {
+          "holiday_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Holiday Date"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "demand_multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Demand Multiplier"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "holiday_date",
+          "label",
+          "demand_multiplier"
+        ],
+        "title": "HolidayInput"
+      },
+      "HolidayOutput": {
+        "properties": {
+          "holiday_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Holiday Date"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "demand_multiplier": {
+            "type": "string",
+            "title": "Demand Multiplier"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "holiday_date",
+          "label",
+          "demand_multiplier",
+          "id"
+        ],
+        "title": "HolidayOutput"
+      },
+      "InventoryPositionOutput": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "sku": {
+            "type": "string",
+            "title": "Sku"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "physical_on_hand": {
+            "type": "string",
+            "title": "Physical On Hand"
+          },
+          "saleable_on_hand": {
+            "type": "string",
+            "title": "Saleable On Hand"
+          },
+          "expired_quantity": {
+            "type": "string",
+            "title": "Expired Quantity"
+          },
+          "quarantined_quantity": {
+            "type": "string",
+            "title": "Quarantined Quantity"
+          },
+          "on_order": {
+            "type": "string",
+            "title": "On Order"
+          },
+          "overdue_on_order": {
+            "type": "string",
+            "title": "Overdue On Order"
+          },
+          "earliest_expiry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Expiry"
+          },
+          "remaining_shelf_life_days": {
+            "type": "integer",
+            "title": "Remaining Shelf Life Days"
+          },
+          "risk_score": {
+            "type": "number",
+            "title": "Risk Score"
+          },
+          "buckets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Buckets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "sku",
+          "name",
+          "category",
+          "unit",
+          "physical_on_hand",
+          "saleable_on_hand",
+          "expired_quantity",
+          "quarantined_quantity",
+          "on_order",
+          "overdue_on_order",
+          "earliest_expiry",
+          "remaining_shelf_life_days",
+          "risk_score",
+          "buckets"
+        ],
+        "title": "InventoryPositionOutput"
       },
       "MovementOutput": {
         "properties": {
@@ -1455,7 +2956,6 @@
           },
           "quantity_delta": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity Delta"
           },
           "occurred_at": {
@@ -1535,12 +3035,10 @@
           },
           "quantity": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity"
           },
           "overdue_quantity": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Overdue Quantity"
           }
         },
@@ -1554,6 +3052,484 @@
           "overdue_quantity"
         ],
         "title": "OnOrderOutput"
+      },
+      "PlannerBadge": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "earned": {
+            "type": "boolean",
+            "title": "Earned",
+            "default": false
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "PlannerBadge"
+      },
+      "PlannerCard": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "SELL_FIRST",
+              "MARKDOWN",
+              "DONATE",
+              "WRITE_OFF",
+              "RECEIVE_ORDER",
+              "STOCKOUT",
+              "BUY",
+              "BAKE",
+              "HOLD",
+              "DATA_WARNING"
+            ],
+            "title": "Kind"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "warning",
+              "info"
+            ],
+            "title": "Priority"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "product_sku": {
+            "type": "string",
+            "title": "Product Sku",
+            "default": ""
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name",
+            "default": ""
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity",
+            "default": "0"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "default": ""
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "why": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Why"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "default": 0.35
+          },
+          "expiry_risk": {
+            "type": "string",
+            "title": "Expiry Risk",
+            "default": "healthy"
+          },
+          "impact": {
+            "type": "string",
+            "title": "Impact",
+            "default": ""
+          },
+          "calculation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Calculation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "priority"
+        ],
+        "title": "PlannerCard"
+      },
+      "PlannerDay": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "weekday": {
+            "type": "string",
+            "title": "Weekday"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline",
+            "default": ""
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "calm",
+              "busy",
+              "risky"
+            ],
+            "title": "Risk Level",
+            "default": "calm"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/PlannerDayKpis"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerCard"
+            },
+            "type": "array",
+            "title": "Cards"
+          },
+          "orders_due": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerOrderDue"
+            },
+            "type": "array",
+            "title": "Orders Due"
+          },
+          "projection": {
+            "$ref": "#/components/schemas/PlannerProjection"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "weekday"
+        ],
+        "title": "PlannerDay"
+      },
+      "PlannerDayKpis": {
+        "properties": {
+          "value_at_risk": {
+            "type": "string",
+            "title": "Value At Risk",
+            "default": "0"
+          },
+          "expected_waste": {
+            "type": "string",
+            "title": "Expected Waste",
+            "default": "0"
+          },
+          "stockout_risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Stockout Risk",
+            "default": "low"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlannerDayKpis"
+      },
+      "PlannerOrderDue": {
+        "properties": {
+          "purchase_order_id": {
+            "type": "integer",
+            "title": "Purchase Order Id"
+          },
+          "supplier_id": {
+            "type": "integer",
+            "title": "Supplier Id"
+          },
+          "expected_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expected Date"
+          },
+          "arrival_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Arrival Date"
+          },
+          "overdue": {
+            "type": "boolean",
+            "title": "Overdue",
+            "default": false
+          },
+          "total_quantity": {
+            "type": "string",
+            "title": "Total Quantity",
+            "default": "0"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerOrderLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "purchase_order_id",
+          "supplier_id",
+          "expected_date",
+          "arrival_date"
+        ],
+        "title": "PlannerOrderDue"
+      },
+      "PlannerOrderLine": {
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "sku": {
+            "type": "string",
+            "title": "Sku"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "unit_cost": {
+            "type": "string",
+            "title": "Unit Cost",
+            "default": "0"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expiry Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "sku",
+          "product_name",
+          "quantity",
+          "expiry_date"
+        ],
+        "title": "PlannerOrderLine"
+      },
+      "PlannerProjection": {
+        "properties": {
+          "starting_stock": {
+            "type": "string",
+            "title": "Starting Stock",
+            "default": "0"
+          },
+          "arrivals": {
+            "type": "string",
+            "title": "Arrivals",
+            "default": "0"
+          },
+          "expected_sales": {
+            "type": "string",
+            "title": "Expected Sales",
+            "default": "0"
+          },
+          "unmet_demand": {
+            "type": "string",
+            "title": "Unmet Demand",
+            "default": "0"
+          },
+          "ending_stock": {
+            "type": "string",
+            "title": "Ending Stock",
+            "default": "0"
+          },
+          "expired_quantity": {
+            "type": "string",
+            "title": "Expired Quantity",
+            "default": "0"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlannerProjection"
+      },
+      "PlannerWeek": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "day_count": {
+            "type": "integer",
+            "title": "Day Count",
+            "default": 7
+          },
+          "mode": {
+            "type": "string",
+            "const": "forecast",
+            "title": "Mode",
+            "default": "forecast"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine",
+            "default": "baseline"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerDay"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "badges": {
+            "items": {
+              "$ref": "#/components/schemas/PlannerBadge"
+            },
+            "type": "array",
+            "title": "Badges"
+          },
+          "weekly_summary": {
+            "$ref": "#/components/schemas/PlannerWeeklySummary"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of",
+          "start_date",
+          "end_date",
+          "generated_at"
+        ],
+        "title": "PlannerWeek"
+      },
+      "PlannerWeeklySummary": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days",
+            "default": 0
+          },
+          "cards": {
+            "type": "integer",
+            "title": "Cards",
+            "default": 0
+          },
+          "cost_at_risk": {
+            "type": "string",
+            "title": "Cost At Risk",
+            "default": "0"
+          },
+          "expected_waste": {
+            "type": "string",
+            "title": "Expected Waste",
+            "default": "0"
+          },
+          "estimated_cost_avoided": {
+            "type": "string",
+            "title": "Estimated Cost Avoided",
+            "default": "0"
+          },
+          "stockout_days": {
+            "type": "integer",
+            "title": "Stockout Days",
+            "default": 0
+          },
+          "waste_free_days": {
+            "type": "integer",
+            "title": "Waste Free Days",
+            "default": 0
+          },
+          "plan_coverage_days": {
+            "type": "integer",
+            "title": "Plan Coverage Days",
+            "default": 0
+          },
+          "quest_progress": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Quest Progress",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlannerWeeklySummary"
       },
       "ProductInput": {
         "properties": {
@@ -1618,12 +3594,37 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)"
+                "type": "string"
               }
             ],
             "title": "Moq",
             "default": "1"
+          },
+          "case_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Case Size",
+            "default": 1
+          },
+          "review_period_days": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Review Period Days",
+            "default": 1
+          },
+          "service_level": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 0.999,
+                "minimum": 0.5
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Service Level",
+            "default": "0.95"
           },
           "safety_stock_days": {
             "anyOf": [
@@ -1632,8 +3633,7 @@
                 "minimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)"
+                "type": "string"
               }
             ],
             "title": "Safety Stock Days",
@@ -1730,13 +3730,28 @@
           },
           "moq": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)",
             "title": "Moq",
             "default": "1"
           },
+          "case_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Case Size",
+            "default": 1
+          },
+          "review_period_days": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Review Period Days",
+            "default": 1
+          },
+          "service_level": {
+            "type": "string",
+            "title": "Service Level",
+            "default": "0.95"
+          },
           "safety_stock_days": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)",
             "title": "Safety Stock Days",
             "default": "1"
           },
@@ -1797,8 +3812,7 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)"
+                "type": "string"
               }
             ],
             "title": "Quantity"
@@ -1810,8 +3824,7 @@
                 "minimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+                "type": "string"
               }
             ],
             "title": "Unit Cost"
@@ -1835,12 +3848,10 @@
           },
           "quantity": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)",
             "title": "Quantity"
           },
           "unit_cost": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
             "title": "Unit Cost"
           },
           "id": {
@@ -1849,7 +3860,6 @@
           },
           "received_quantity": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Received Quantity"
           }
         },
@@ -1964,11 +3974,196 @@
         ],
         "title": "PurchaseOrderOutput"
       },
+      "PurchaseReceiptInput": {
+        "properties": {
+          "actor_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Actor Name"
+          },
+          "actor_role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "manager",
+              "bookkeeper",
+              "baker",
+              "staff",
+              "viewer"
+            ],
+            "title": "Actor Role",
+            "default": "owner"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Request Id"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PurchaseReceiptLineInput"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Lines"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "actor_name",
+          "reason",
+          "request_id",
+          "lines"
+        ],
+        "title": "PurchaseReceiptInput"
+      },
+      "PurchaseReceiptLineInput": {
+        "properties": {
+          "purchase_order_line_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Purchase Order Line Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "received_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Received Date"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expiry Date"
+          },
+          "baked_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baked Date"
+          },
+          "batch_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Code"
+          },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "purchase_order_line_id",
+          "quantity",
+          "received_date",
+          "expiry_date"
+        ],
+        "title": "PurchaseReceiptLineInput"
+      },
+      "PurchaseReceiptOutput": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "purchase_order_id": {
+            "type": "integer",
+            "title": "Purchase Order Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "received_lines": {
+            "type": "integer",
+            "title": "Received Lines"
+          },
+          "batches": {
+            "items": {
+              "$ref": "#/components/schemas/BatchOutput"
+            },
+            "type": "array",
+            "title": "Batches"
+          },
+          "replayed": {
+            "type": "boolean",
+            "title": "Replayed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "purchase_order_id",
+          "status",
+          "received_lines",
+          "batches"
+        ],
+        "title": "PurchaseReceiptOutput"
+      },
       "Recommendation": {
         "properties": {
           "product_id": {
             "type": "integer",
             "title": "Product Id"
+          },
+          "sku": {
+            "type": "string",
+            "title": "Sku",
+            "default": ""
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name",
+            "default": ""
           },
           "action": {
             "type": "string",
@@ -1978,13 +4173,13 @@
               "REDUCE",
               "MARKDOWN",
               "DONATE",
-              "BAKE"
+              "BAKE",
+              "WRITE_OFF"
             ],
             "title": "Action"
           },
           "quantity": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)",
             "title": "Quantity"
           },
           "rationale": {
@@ -2006,6 +4201,112 @@
             "type": "integer",
             "exclusiveMinimum": 0.0,
             "title": "Forecast Horizon Days"
+          },
+          "why": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Why"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "calculation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Calculation"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name",
+            "default": ""
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version",
+            "default": ""
+          },
+          "forecast_run_id": {
+            "type": "string",
+            "title": "Forecast Run Id",
+            "default": ""
+          },
+          "input_snapshot_id": {
+            "type": "string",
+            "title": "Input Snapshot Id",
+            "default": ""
+          },
+          "actionable": {
+            "type": "boolean",
+            "title": "Actionable",
+            "default": true
+          },
+          "data_quality": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality"
+          },
+          "forecast_lower": {
+            "type": "number",
+            "title": "Forecast Lower",
+            "default": 0.0
+          },
+          "forecast_upper": {
+            "type": "number",
+            "title": "Forecast Upper",
+            "default": 0.0
+          },
+          "approval_required": {
+            "type": "boolean",
+            "title": "Approval Required",
+            "default": true
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine",
+            "default": "baseline"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "type": "string",
+            "title": "Decided By",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -2021,6 +4322,162 @@
         ],
         "title": "Recommendation"
       },
+      "RecommendationDecisionInput": {
+        "properties": {
+          "actor_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Actor Name"
+          },
+          "actor_role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "manager",
+              "bookkeeper",
+              "baker",
+              "staff",
+              "viewer"
+            ],
+            "title": "Actor Role",
+            "default": "owner"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "EDITED",
+              "REJECTED"
+            ],
+            "title": "Decision"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "BUY",
+              "HOLD",
+              "REDUCE",
+              "MARKDOWN",
+              "DONATE",
+              "BAKE",
+              "WRITE_OFF"
+            ],
+            "title": "Action"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "edited_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited Quantity"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "actor_name",
+          "reason",
+          "decision",
+          "action",
+          "quantity"
+        ],
+        "title": "RecommendationDecisionInput"
+      },
+      "RecommendationList": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of",
+          "engine",
+          "recommendations"
+        ],
+        "title": "RecommendationList"
+      },
+      "SeasonalAdvice": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "availability_score": {
+            "type": "number",
+            "title": "Availability Score"
+          },
+          "price_index": {
+            "type": "number",
+            "title": "Price Index"
+          },
+          "local": {
+            "type": "boolean",
+            "title": "Local"
+          },
+          "suggestion": {
+            "type": "string",
+            "title": "Suggestion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "availability_score",
+          "price_index",
+          "local",
+          "suggestion"
+        ],
+        "title": "SeasonalAdvice"
+      },
       "StockActionInput": {
         "properties": {
           "actor_name": {
@@ -2033,7 +4490,10 @@
             "type": "string",
             "enum": [
               "owner",
+              "manager",
               "bookkeeper",
+              "baker",
+              "staff",
               "viewer"
             ],
             "title": "Actor Role",
@@ -2057,8 +4517,7 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)"
+                "type": "string"
               }
             ],
             "title": "Quantity"
@@ -2108,6 +4567,166 @@
         ],
         "title": "StockActionInput"
       },
+      "StockActionOutput": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "product_id": {
+            "type": "integer",
+            "title": "Product Id"
+          },
+          "movement_type": {
+            "type": "string",
+            "title": "Movement Type"
+          },
+          "requested_quantity": {
+            "type": "string",
+            "title": "Requested Quantity"
+          },
+          "allocated_quantity": {
+            "type": "string",
+            "title": "Allocated Quantity"
+          },
+          "business_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Business Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/StockAllocation"
+            },
+            "type": "array",
+            "title": "Allocations"
+          },
+          "replayed": {
+            "type": "boolean",
+            "title": "Replayed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "product_id",
+          "movement_type",
+          "requested_quantity",
+          "allocated_quantity",
+          "business_date",
+          "status",
+          "allocations"
+        ],
+        "title": "StockActionOutput"
+      },
+      "StockAdjustmentInput": {
+        "properties": {
+          "actor_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Actor Name"
+          },
+          "actor_role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "manager",
+              "bookkeeper",
+              "baker",
+              "staff",
+              "viewer"
+            ],
+            "title": "Actor Role",
+            "default": "owner"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "product_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Product Id"
+          },
+          "batch_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Batch Id"
+          },
+          "quantity_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity Delta"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "actor_name",
+          "reason",
+          "product_id",
+          "batch_id",
+          "quantity_delta",
+          "request_id"
+        ],
+        "title": "StockAdjustmentInput"
+      },
+      "StockAllocation": {
+        "properties": {
+          "batch_id": {
+            "type": "integer",
+            "title": "Batch Id"
+          },
+          "batch_code": {
+            "type": "string",
+            "title": "Batch Code"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Expiry Date"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "unit_cost": {
+            "type": "string",
+            "title": "Unit Cost"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "batch_id",
+          "batch_code",
+          "expiry_date",
+          "quantity",
+          "unit_cost"
+        ],
+        "title": "StockAllocation"
+      },
       "SupplierInput": {
         "properties": {
           "name": {
@@ -2129,8 +4748,7 @@
                 "exclusiveMinimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)"
+                "type": "string"
               }
             ],
             "title": "Moq",
@@ -2144,8 +4762,7 @@
                 "minimum": 0.0
               },
               {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,3}0*$"
+                "type": "string"
               }
             ],
             "title": "Reliability",
@@ -2175,13 +4792,11 @@
           },
           "moq": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,11}|(?=[\\d.]{1,15}0*$)\\d{0,11}\\.\\d{0,3}0*$)",
             "title": "Moq",
             "default": "1"
           },
           "reliability": {
             "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,3}0*$",
             "title": "Reliability",
             "default": "0.95"
           },

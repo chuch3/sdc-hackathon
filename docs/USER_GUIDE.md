@@ -91,8 +91,14 @@ The Week board is a seven-day plan built from today's stock, the approved orders
 forecast. Each day shows the projected stock, what arrives, and a short list of cards:
 sell first, markdown, buy, bake, receive order, write off, or stockout.
 
-- Hover a card to see why it is there. On a touch screen, use **Expand every card**.
-- Under the board, the **activity calendar** shows how busy each day was. A red corner
+- The **weekly workload bar** above the board sums the week: total tasks, completion
+  percentage, one segment per day (wider = more tasks, colour = risk), and how many tasks
+  of each kind. The cards below already show the summary; use **Show every task's
+  reasoning** to open the why, impact, and calculation for all of them.
+- A day with more than three tasks shows the first three and a **+N more tasks · show all N**
+  button. It opens a popup with every task for that day and their reasoning; close it with
+  the **X**, Escape, or a click outside the popup.
+- Above the workload bar, the **activity calendar** shows how busy each day was. A red corner
   means stock was wasted that day; an amber corner means a stockout was recorded.
 
 Two things to remember:
@@ -191,10 +197,11 @@ an Orbyte link is configured. Credentials belong in environment variables, never
 The dashboard uses the Autumn Bakehouse theme: Fraunces and Nunito Sans, a warm cream
 canvas, rust and amber accents, navigation across the top of the page, and a vintage
 letterpress treatment (aged paper, double rules, small-caps labels, stamp-style status chips).
-The workspace panel is opaque, so the data always sits on solid paper, and the animated
-**Autumn Forest** piece from ASCII Magic sits behind it as the page background. The piece is
-decoration only; if it cannot be fetched the aged-paper background remains and the dashboard
-still works. The design tokens, layout, and the editable CSS scaffold
+The workspace panel is 50% paper, so the data stays readable while the animated
+**Autumn Forest** piece from ASCII Magic shows through and around it as the page background.
+The piece is decoration only; if it cannot be fetched the aged-paper background remains and the
+dashboard still works. The **Dark mode** button at the end of the top navigation switches the
+whole workspace (and the art) to the night palette; it switches back to **Light mode**. The design tokens, layout, and the editable CSS scaffold
 (`dashboard/static/theme.css`) are documented in `docs/UI_DESIGN.md`.
 
 ## Running the demo

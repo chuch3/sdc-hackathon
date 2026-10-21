@@ -44,6 +44,14 @@ st.markdown(
 
 st.html(ASCII_MAGIC_HTML, unsafe_allow_javascript=True)
 
+if "fs_dark" not in st.session_state:
+    st.session_state.fs_dark = False
+st.html(
+    "<script>document.documentElement.setAttribute("
+    f"'data-fs-theme', '{'dark' if st.session_state.fs_dark else 'light'}');</script>",
+    unsafe_allow_javascript=True,
+)
+
 params = st.query_params
 orbyte_actor = params.get("actor") or params.get("email")
 if "actor_name" not in st.session_state:
@@ -162,6 +170,15 @@ with st.container(horizontal=True, key="top-nav", gap="small", vertical_alignmen
         ):
             st.session_state.page = item
             st.rerun()
+    if st.button(
+        "Light mode" if st.session_state.fs_dark else "Dark mode",
+        key="theme-toggle",
+        icon=":material/light_mode:" if st.session_state.fs_dark else ":material/dark_mode:",
+        type="secondary",
+        help="Switch the workspace between the paper and the night theme.",
+    ):
+        st.session_state.fs_dark = not st.session_state.fs_dark
+        st.rerun()
 page = st.session_state.page
 
 actor = {

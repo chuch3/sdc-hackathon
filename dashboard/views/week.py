@@ -6,6 +6,7 @@ from html import escape
 import streamlit as st
 
 from dashboard.components import metric_row, note_card, number, section_header, show_error
+from dashboard.quest_modal import QUEST_MODAL_HTML
 
 CARD_LABEL = {
     "SELL_FIRST": "Sell first",
@@ -34,6 +35,7 @@ CARD_TONE = {
 RISK_TONE = {"calm": "green", "busy": "amber", "risky": "red"}
 RISK_LABEL = {"calm": "calm", "busy": "busy", "risky": "risky"}
 HEAT_LEVELS = 5
+VISIBLE_CARDS = 3
 
 
 def _day_label(value: str) -> str:
@@ -43,7 +45,13 @@ def _day_label(value: str) -> str:
         return value
 
 
-def _card_html(card: dict) -> str:
+def _markup(value: str) -> str:
+    """Strip indentation and blank lines so Markdown keeps one raw HTML block."""
+    lines = (line.strip() for line in value.strip().splitlines())
+    return "\n".join(line for line in lines if line)
+
+
+def _card_html(card: dict, overflow: bool = False) -> str:
     kind = card.get("kind", "HOLD")
     tone = CARD_TONE.get(kind, "slate")
     label = CARD_LABEL.get(kind, kind.title())
@@ -60,8 +68,9 @@ def _card_html(card: dict) -> str:
         for key, value in calculation.items()
     )
     impact = card.get("impact") or ""
-    return f"""
-    <div class="quest-card {escape(kind.lower())}" tabindex="0">
+    overflow_class = " quest-card-overflow" if overflow else ""
+    return _markup(f"""
+    <div class="quest-card {escape(kind.lower())}{overflow_class}" tabindex="0">
       <div class="quest-card-top">
         <span class="pill {tone}">{escape(label)}</span>
         <span class="quest-qty">{number(quantity, 1)} {escape(unit)}</span>
@@ -75,7 +84,7 @@ def _card_html(card: dict) -> str:
         {f'<ul class="quest-calc">{rows}</ul>' if rows else ''}
       </div>
     </div>
-    """
+    """)
 
 
 def _day_html(day: dict) -> str:
@@ -83,7 +92,22 @@ def _day_html(day: dict) -> str:
     tone = RISK_TONE.get(risk, "slate")
     kpis = day.get("kpis", {})
     projection = day.get("projection", {})
-    cards = "".join(_card_html(card) for card in day.get("cards", []))
+    day_cards = day.get("cards", [])
+    cards = "".join(
+        _card_html(card, overflow=index >= VISIBLE_CARDS)
+        for index, card in enumerate(day_cards)
+    )
+    more = ""
+    if len(day_cards) > VISIBLE_CARDS:
+        more = (
+            f'<button type="button" class="quest-more" '
+            f'data-day="{escape(day.get("weekday", ""))}" '
+            f'data-date="{escape(day.get("date", ""))}" '
+            f'aria-haspopup="dialog" aria-label="Show all {len(day_cards)} tasks for '
+            f'{escape(day.get("weekday", ""))}">'
+            f"+{len(day_cards) - VISIBLE_CARDS} more tasks "
+            f"\u00b7 show all {len(day_cards)}</button>"
+        )
     orders = "".join(
         f"<li>#{order['purchase_order_id']} · {number(float(order['total_quantity']), 1)} units"
         f"{' · overdue' if order.get('overdue') else ''}</li>"
@@ -103,7 +127,7 @@ def _day_html(day: dict) -> str:
         empty = '<div class="quest-empty">No new action; the risk is flagged above</div>'
     else:
         empty = '<div class="quest-empty">Nothing to do</div>'
-    return f"""
+    return _markup(f"""
     <div class="quest-day">
       <div class="quest-day-head">
         <div class="quest-weekday">{escape(day.get('weekday', ''))}</div>
@@ -113,32 +137,56 @@ def _day_html(day: dict) -> str:
       <div class="quest-day-stats">{stock}</div>
       {f'<ul class="quest-orders">{orders}</ul>' if orders else ''}
       {cards or empty}
+      {more}
     </div>
-    """
+    """)
 
 
-def _progress_html(summary: dict) -> str:
-    days = int(summary.get("days", 0) or 0)
-    covered = int(summary.get("plan_coverage_days", 0) or 0)
-    percent = int(round(summary.get("quest_progress", 0) * 100))
-    return f"""
-    <div class="quest-progress">
-      <div class="quest-progress-head">
-        <span>Plan coverage</span>
-        <strong>{covered} of {days} days with a clean plan</strong>
+def _workload_html(plan: dict, summary: dict) -> str:
+    """One horizontal bar: the week's task load, split by day, plus completion."""
+    days = plan.get("days", [])
+    total = int(summary.get("cards", 0) or 0)
+    clean = int(summary.get("plan_coverage_days", 0) or 0)
+    day_count = int(summary.get("days", len(days)) or 0)
+    percent = int(round(float(summary.get("quest_progress", 0) or 0) * 100))
+
+    kind_counts: dict[str, int] = {}
+    segments = []
+    for day in days:
+        cards = day.get("cards", [])
+        risk = day.get("risk_level", "calm")
+        for card in cards:
+            kind = card.get("kind", "HOLD")
+            kind_counts[kind] = kind_counts.get(kind, 0) + 1
+        count = len(cards)
+        label = escape(day.get("weekday", "")[:3])
+        segments.append(
+            f'<span class="quest-load-seg {escape(risk)}" style="flex:{count + 0.4:.2f}" '
+            f'title="{escape(day.get("weekday", ""))} {escape(day.get("date", ""))}: '
+            f'{count} task{"s" if count != 1 else ""}">'
+            f"<b>{label}</b><i>{count if count else '·'}</i></span>"
+        )
+
+    legend = "".join(
+        f'<span class="pill {CARD_TONE.get(kind, "slate")}">'
+        f"{escape(CARD_LABEL.get(kind, kind.title()))} {count}</span>"
+        for kind, count in sorted(kind_counts.items(), key=lambda item: (-item[1], item[0]))
+    )
+
+    return _markup(f"""
+    <div class="quest-workload">
+      <div class="quest-workload-head">
+        <span>Weekly workload</span>
+        <strong>{total} tasks · {percent}% covered</strong>
       </div>
       <div class="quest-bar"><span style="width:{percent}%"></span></div>
+      <div class="quest-load">{"".join(segments)}</div>
+      <div class="quest-workload-foot">
+        <span class="quest-workload-note">{clean} of {day_count} days run a clean plan</span>
+        <span class="quest-workload-legend">{legend}</span>
+      </div>
     </div>
-    """
-
-
-def _badges_html(badges: list[dict]) -> str:
-    chips = "".join(
-        f"<span class='quest-badge{' earned' if badge.get('earned') else ''}' "
-        f"title='{escape(badge.get('detail', ''))}'>{escape(badge.get('label', ''))}</span>"
-        for badge in badges
-    )
-    return f'<div class="quest-badges">{chips}</div>'
+    """)
 
 
 def _level(intensity: float) -> int:
@@ -195,12 +243,12 @@ def _calendar_html(calendar: dict) -> str:
     legend = "".join(
         f'<span class="heat-cell lv{level}"></span>' for level in range(HEAT_LEVELS + 1)
     )
-    return f"""
+    return _markup(f"""
     <div class="heat-map">
       <div class="heat-grid">{"".join(cells)}</div>
       <div class="heat-legend"><span>Less</span>{legend}<span>More</span></div>
     </div>
-    """
+    """)
 
 
 def render(client, actor):
@@ -244,36 +292,6 @@ def render(client, actor):
         ]
     )
 
-    section_header(
-        "Weekly quest board",
-        f"{plan.get('start_date')} to {plan.get('end_date')} · planned from "
-        f"{plan.get('as_of')} · {plan.get('engine')} engine",
-        "wheat",
-    )
-    st.markdown(_progress_html(summary), unsafe_allow_html=True)
-    st.markdown(_badges_html(plan.get("badges", [])), unsafe_allow_html=True)
-
-    days = plan.get("days", [])
-    if not days:
-        st.info("No plan available yet. Add products and sales history first.")
-        return
-
-    expand_all = st.toggle(
-        "Expand every card",
-        value=False,
-        key="quest_expand_all",
-        help="Hover a card to peek at its reasoning, or turn this on to open every card.",
-    )
-    board_class = "quest-board expand-all" if expand_all else "quest-board"
-    columns = st.columns(len(days))
-    for column, day in zip(columns, days):
-        column.markdown(f'<div class="{board_class}">{_day_html(day)}</div>', unsafe_allow_html=True)
-
-    st.caption(
-        "Read-only projection: the board changes nothing in the ledger. Approve the real "
-        "actions on the Actions page."
-    )
-
     try:
         calendar = client.activity_calendar()
     except Exception:
@@ -290,6 +308,39 @@ def render(client, actor):
             "Darker squares mean a busier day. A red corner means stock was wasted that "
             "day; an amber corner means a stockout was recorded."
         )
+
+    section_header(
+        "Weekly quest board",
+        f"{plan.get('start_date')} to {plan.get('end_date')} · planned from "
+        f"{plan.get('as_of')} · {plan.get('engine')} engine",
+        "wheat",
+    )
+    days = plan.get("days", [])
+    if not days:
+        st.markdown(_workload_html(plan, summary), unsafe_allow_html=True)
+        st.info("No plan available yet. Add products and sales history first.")
+        return
+
+    st.markdown(_workload_html(plan, summary), unsafe_allow_html=True)
+
+    expand_all = st.toggle(
+        "Show every task's reasoning",
+        value=False,
+        key="quest_expand_all",
+        help="The board shows each task summary. Turn this on to open the reasoning, "
+        "impact, and calculation for every card.",
+    )
+    board_class = "quest-board expand-all show-all" if expand_all else "quest-board"
+    columns = st.columns(len(days))
+    for column, day in zip(columns, days):
+        column.markdown(f'<div class="{board_class}">{_day_html(day)}</div>', unsafe_allow_html=True)
+
+    st.html(QUEST_MODAL_HTML, unsafe_allow_javascript=True)
+
+    st.caption(
+        "Read-only projection: the board changes nothing in the ledger. Approve the real "
+        "actions on the Actions page."
+    )
 
     for assumption in plan.get("assumptions", []):
         note_card(assumption, icon_name="leaf", tone="sage")

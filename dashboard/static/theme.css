@@ -86,8 +86,21 @@ select {
   font-family: var(--font-body);
 }
 
-html,
+html {
+  background-color: var(--bg);
+}
+
+/* The paper texture lives in its own layer, below the ASCII art. If it sat on
+   the body background it would paint over the negative z-index backdrop. */
 body {
+  background: transparent;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
   background-color: var(--bg);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
@@ -99,7 +112,6 @@ body {
     radial-gradient(760px 460px at 88% -10%, #f6e2c4 0%, rgba(246, 226, 196, 0) 64%),
     radial-gradient(620px 380px at -6% 6%, #ecdcc0 0%, rgba(236, 220, 192, 0) 60%),
     radial-gradient(900px 620px at 50% 118%, rgba(120, 80, 45, 0.12) 0%, rgba(120, 80, 45, 0) 62%);
-  background-attachment: fixed;
 }
 
 .stApp {
@@ -120,6 +132,7 @@ body {
   place-items: center;
   overflow: hidden;
   pointer-events: none;
+  color: var(--fs-ascii-ink, var(--ink));
   opacity: 0.42;
 }
 #fs-ascii-backdrop ascii-art {
@@ -143,12 +156,13 @@ footer {
   position: relative;
   padding: 2.2rem 2.6rem 3.2rem;
   max-width: 1380px;
-  background: var(--paper);
+  background: rgba(253, 248, 236, 0.5);
+  backdrop-filter: blur(2px);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-lg);
   box-shadow:
     0 18px 44px rgba(90, 60, 30, 0.14),
-    0 0 0 6px rgba(253, 248, 236, 0.9),
+    0 0 0 6px rgba(253, 248, 236, 0.5),
     0 0 0 7px rgba(185, 160, 122, 0.28);
 }
 .block-container::before {
@@ -396,6 +410,10 @@ a {
   color: var(--ink);
   border-color: transparent;
   transform: translateY(-1px);
+}
+.st-key-top-nav .st-key-theme-toggle button {
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-soft);
 }
 .st-key-top-nav .stButton button[kind="primary"] {
   background: var(--primary);
@@ -1241,40 +1259,93 @@ pre code,
 
 @media (min-width: 981px) {
   .quest-board {
-    max-height: 68vh;
-    overflow-y: auto;
     padding-right: 4px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line-strong) transparent;
   }
 }
 
 /* 11b. Weekly quest board ================================================ */
-.quest-progress {
+.quest-workload {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 13px 16px 15px;
+  padding: 13px 16px 14px;
   box-shadow: var(--shadow-soft);
   margin: 0.2rem 0 0.55rem;
 }
-.quest-progress-head {
+.quest-workload-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
 }
-.quest-progress-head span {
+.quest-workload-head span {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 750;
   letter-spacing: 0.015em;
 }
-.quest-progress-head strong {
+.quest-workload-head strong {
   color: var(--ink);
   font-family: var(--font-display);
   font-size: 0.95rem;
+}
+.quest-load {
+  display: flex;
+  gap: 3px;
+  height: 34px;
+  margin-top: 8px;
+}
+.quest-load-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 34px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.quest-load-seg b {
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+.quest-load-seg i {
+  font-style: normal;
+  font-weight: 800;
+  opacity: 0.85;
+}
+.quest-load-seg.calm {
+  background: var(--sage-soft);
+  color: var(--sage-ink);
+}
+.quest-load-seg.busy {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+.quest-load-seg.risky {
+  background: var(--berry-soft);
+  color: var(--berry);
+}
+.quest-workload-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+}
+.quest-workload-note {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.quest-workload-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 .quest-bar {
   height: 9px;
@@ -1385,12 +1456,13 @@ pre code,
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-.quest-card:hover,
-.quest-card:focus-visible {
-  transform: translateY(-3px) scale(1.015);
-  box-shadow: 0 14px 30px rgba(90, 60, 30, 0.18);
+.quest-card:hover {
+  border-color: var(--line-strong);
   background: var(--paper);
-  z-index: 5;
+}
+.quest-card:focus-visible {
+  border-color: var(--primary);
+  background: var(--paper);
 }
 .quest-card.write_off,
 .quest-card.stockout {
@@ -1414,16 +1486,19 @@ pre code,
 }
 .quest-card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 4px 6px;
   margin-bottom: 4px;
+  min-width: 0;
 }
 .quest-qty {
   font-size: 0.7rem;
   font-weight: 850;
   color: var(--ink);
   white-space: nowrap;
+  max-width: 100%;
 }
 .quest-card-title {
   font-family: var(--font-display);
@@ -1454,10 +1529,8 @@ pre code,
     transform 280ms var(--ease),
     margin 280ms var(--ease);
 }
-.quest-card:hover .quest-card-extra,
-.quest-card:focus-visible .quest-card-extra,
 .quest-board.expand-all .quest-card-extra {
-  max-height: 460px;
+  max-height: 900px;
   opacity: 1;
   transform: translateY(0);
   margin-top: 7px;
@@ -1696,7 +1769,7 @@ div[data-testid="stVerticalBlockBorderWrapper"],
 div[data-testid="stExpander"],
 div[data-testid="stDataFrame"],
 .ladder,
-.quest-progress,
+.quest-workload,
 .heat-map,
 .status-row {
   border-color: var(--line-strong);
@@ -1764,9 +1837,12 @@ div[data-testid="stDataFrame"],
   .quest-day {
     margin-bottom: 0.7rem;
   }
-  .quest-progress-head {
+  .quest-workload-head {
     flex-direction: column;
     gap: 2px;
+  }
+  .quest-load-seg b {
+    display: none;
   }
 }
 
@@ -1867,4 +1943,353 @@ div[data-testid="stDataFrame"],
   .ticker-track {
     animation: none;
   }
+}
+
+/* 13b. Task popup ========================================================= */
+.quest-card-overflow {
+  display: none;
+}
+.quest-board.show-all .quest-card-overflow {
+  display: block;
+}
+.quest-more {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 7px 9px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-2);
+  color: var(--primary);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+.quest-more:hover,
+.quest-more:focus-visible {
+  background: var(--paper-deep);
+  border-color: var(--primary);
+  outline: none;
+}
+body.fs-modal-open {
+  overflow: hidden;
+}
+.fs-quest-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 4vw;
+  background: rgba(38, 26, 14, 0.58);
+  backdrop-filter: blur(3px);
+}
+.fs-quest-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(780px, 100%);
+  max-height: 90vh;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 30px 70px rgba(30, 18, 8, 0.4),
+    0 0 0 1px rgba(185, 160, 122, 0.3);
+  overflow: hidden;
+}
+.fs-quest-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 18px 13px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-2);
+}
+.fs-quest-kicker {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.fs-quest-title {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.fs-quest-sub {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.fs-quest-close {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    color var(--speed) var(--ease);
+}
+.fs-quest-close:hover,
+.fs-quest-close:focus-visible {
+  background: var(--berry-soft);
+  border-color: var(--berry);
+  color: var(--berry);
+  outline: none;
+}
+.fs-quest-body {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px 18px;
+  overflow-y: auto;
+}
+.fs-quest-body .quest-card {
+  margin-bottom: 0;
+}
+.fs-quest-body .quest-card-overflow {
+  display: block;
+}
+.fs-quest-body .quest-card-extra {
+  max-height: none;
+  opacity: 1;
+  transform: none;
+  margin-top: 7px;
+}
+@media (max-width: 620px) {
+  .fs-quest-modal {
+    padding: 0;
+  }
+  .fs-quest-panel {
+    width: 100%;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+  }
+}
+
+/* 14. Night theme ========================================================= */
+/* Set by dashboard/app.py through html[data-fs-theme|="dark"], so every
+   surface keeps the same tokens and only the palette changes. */
+
+html[data-fs-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0d0a;
+  --paper: #1d1914;
+  --paper-2: #241f18;
+  --paper-deep: #17130f;
+  --ink: #f4e9d4;
+  --ink-soft: #dccbb0;
+  --muted: #b4a289;
+  --faint: #917f68;
+  --line: #3a3127;
+  --line-strong: #4e4234;
+  --rule: #6d5b45;
+
+  --primary: #e2794a;
+  --primary-strong: #f0955f;
+  --primary-soft: #3a2519;
+  --amber: #e9a94a;
+  --amber-soft: #352710;
+  --amber-ink: #f5c779;
+  --pumpkin: #dc7c46;
+  --pumpkin-soft: #3b2515;
+  --sage: #96ac6d;
+  --sage-soft: #242c18;
+  --sage-ink: #c8d7a1;
+  --berry: #d96d80;
+  --berry-soft: #372228;
+  --eucalyptus: #83b6ab;
+  --eucalyptus-soft: #1c2b28;
+
+  --shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --press: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --fs-ascii-ink: #e9dcc0;
+}
+
+html[data-fs-theme="dark"] body::before {
+  background-color: var(--bg);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
+    radial-gradient(760px 460px at 88% -10%, #241b12 0%, rgba(36, 27, 18, 0) 64%),
+    radial-gradient(620px 380px at -6% 6%, #1a1712 0%, rgba(26, 23, 18, 0) 60%),
+    radial-gradient(900px 620px at 50% 118%, rgba(90, 60, 30, 0.18) 0%, rgba(90, 60, 30, 0) 62%);
+}
+
+html[data-fs-theme="dark"] #fs-ascii-backdrop {
+  opacity: 0.5;
+}
+
+html[data-fs-theme="dark"] .block-container {
+  background: rgba(29, 25, 20, 0.55);
+  border-color: var(--line-strong);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.55),
+    0 0 0 6px rgba(29, 25, 20, 0.5),
+    0 0 0 7px rgba(120, 98, 70, 0.35);
+}
+html[data-fs-theme="dark"] .block-container::before {
+  border-color: rgba(120, 98, 70, 0.35);
+}
+
+html[data-fs-theme="dark"] [data-testid="stSidebar"] {
+  background: linear-gradient(180deg, #221d17 0%, #17130f 100%);
+  border-right-color: var(--line);
+}
+html[data-fs-theme="dark"] .side-card {
+  background: linear-gradient(140deg, #262019, #1d1914);
+}
+html[data-fs-theme="dark"] .side-foot {
+  background: var(--paper);
+}
+
+html[data-fs-theme="dark"] .st-key-top-nav {
+  border-color: var(--line-strong);
+  background: rgba(24, 20, 16, 0.92);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+html[data-fs-theme="dark"] .hero-bake {
+  border-color: var(--line-strong);
+  background: linear-gradient(115deg, #2a2118 0%, #221b14 62%, #1b1611 100%);
+}
+html[data-fs-theme="dark"] .hero-bake::before {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 236, 205, 0.08) 48%,
+    rgba(255, 255, 255, 0) 66%
+  );
+}
+html[data-fs-theme="dark"] .hero-kicker {
+  background: rgba(255, 248, 235, 0.06);
+  border-color: var(--line-strong);
+}
+
+html[data-fs-theme="dark"] .stButton > button,
+html[data-fs-theme="dark"] .stFormSubmitButton > button,
+html[data-fs-theme="dark"] .stLinkButton > a {
+  background: linear-gradient(180deg, #2b241b 0%, #1f1a14 100%);
+  border-color: var(--line-strong);
+  color: var(--ink);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    var(--press);
+}
+html[data-fs-theme="dark"] .stButton > button:hover,
+html[data-fs-theme="dark"] .stFormSubmitButton > button:hover,
+html[data-fs-theme="dark"] .stLinkButton > a:hover {
+  border-color: var(--primary);
+}
+html[data-fs-theme="dark"] .stButton > button[kind="primary"],
+html[data-fs-theme="dark"] .stFormSubmitButton > button[kind="primary"] {
+  background: linear-gradient(180deg, #c35f35 0%, #a8431f 55%, #8c3517 100%);
+  border-color: #7c2f14;
+  color: #fff7e8;
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+html[data-fs-theme="dark"] .metric-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 42%),
+    var(--paper);
+}
+html[data-fs-theme="dark"] .metric-card::after {
+  background: linear-gradient(225deg, rgba(120, 98, 70, 0.4) 0 50%, transparent 50%);
+}
+
+html[data-fs-theme="dark"] div[data-testid="stExpander"],
+html[data-fs-theme="dark"] div[data-testid="stDataFrame"] {
+  background: var(--paper);
+  border-color: var(--line) !important;
+}
+html[data-fs-theme="dark"] div[data-testid="stDataFrame"] {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+html[data-fs-theme="dark"] .fs-quest-modal {
+  background: rgba(0, 0, 0, 0.7);
+}
+html[data-fs-theme="dark"] .fs-quest-head {
+  background: var(--paper-2);
+}
+html[data-fs-theme="dark"] .quest-card-overflow {
+  display: none;
+}
+html[data-fs-theme="dark"] .quest-board.show-all .quest-card-overflow,
+html[data-fs-theme="dark"] .fs-quest-body .quest-card-overflow {
+  display: block;
+}
+html[data-fs-theme="dark"] .quest-workload,
+html[data-fs-theme="dark"] .quest-day {
+  background: var(--paper);
+  border-color: var(--line);
+}
+html[data-fs-theme="dark"] .quest-card {
+  background: var(--paper-2);
+  border-color: var(--line);
+}
+html[data-fs-theme="dark"] .quest-card:hover,
+html[data-fs-theme="dark"] .quest-card:focus-visible {
+  background: var(--paper-deep);
+}
+
+html[data-fs-theme="dark"] .stTextInput input,
+html[data-fs-theme="dark"] .stNumberInput input,
+html[data-fs-theme="dark"] .stDateInput input,
+html[data-fs-theme="dark"] div[data-baseweb="select"] > div,
+html[data-fs-theme="dark"] textarea {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  border-color: var(--line-strong) !important;
+}
+html[data-fs-theme="dark"] [data-baseweb="popover"] [data-baseweb="menu"],
+html[data-fs-theme="dark"] [data-baseweb="popover"] ul {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+}
+html[data-fs-theme="dark"] [data-baseweb="menu"] li {
+  color: var(--ink) !important;
+}
+html[data-fs-theme="dark"] [data-baseweb="menu"] li:hover {
+  background: var(--paper-2) !important;
+}
+
+html[data-fs-theme="dark"] [data-testid="stToggle"] [data-baseweb="checkbox"] div[role="checkbox"] {
+  background: var(--paper-2);
+  border-color: var(--line-strong);
+}
+html[data-fs-theme="dark"] [data-testid="stToggle"] [data-baseweb="checkbox"] div[role="checkbox"][aria-checked="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+html[data-fs-theme="dark"] [data-testid="stPopover"] > div {
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+html[data-fs-theme="dark"] .st-key-theme-toggle button {
+  border-color: var(--line-strong);
+  background: var(--paper-2);
 }

@@ -294,7 +294,7 @@ Everyone writes tests for their own code and reviews at least one PR. M5 is the 
 2. Record a sale and demonstrate FEFO.
 3. Show a buy/hold/reduce recommendation with rationale, then approve it and show the
    recorded decision on the card.
-4. Open the weekly quest board, hover a card, and walk the projected week of cards.
+4. Open the weekly quest board and read the workload bar and the projected week of cards; use **Show every task's reasoning** for the details.
 5. Show the activity calendar under the board.
 6. Switch to bakery mode and show Saturday's bake plan by daypart and seasonal advice.
 7. Show the estimated SDG impact.

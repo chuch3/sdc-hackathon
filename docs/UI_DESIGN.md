@@ -71,8 +71,23 @@ amber is used with dark ink (`#8A5A00`), never white. Colour is always paired wi
 │  │ Card / chart / recommendation                                  │  │
 │  └────────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────┘
-    Page background: the Autumn Forest ASCII piece, framed by the opaque paper panel
+    Page background: the Autumn Forest ASCII piece, seen through the 50% paper panel
 ```
+
+## Light and night themes
+
+The top navigation ends with a theme button ("Dark mode" / "Light mode") that flips the whole
+workspace. The choice lives in `st.session_state.fs_dark` and `dashboard/app.py` mirrors it onto
+`<html data-fs-theme="dark|light">`.
+
+- The night palette is the same token set with dark values (ink becomes cream, paper becomes
+  charcoal, the accent hues brighten). `theme.css` section 14 holds it, so no component needs a
+  second implementation.
+- The Autumn Forest piece stays the background in both themes; the night palette sets
+  `--fs-ascii-ink` to warm cream and raises the backdrop opacity so the dots glow.
+- Streamlit widgets that are not skinned by the app's own CSS (selects, popovers, toggles,
+  dataframes) get explicit night overrides in the same section. Dataframes are inverted with a
+  CSS filter because Streamlit paints them on canvas.
 
 ## Motion rules
 
@@ -111,26 +126,35 @@ amber is used with dark ink (`#8A5A00`), never white. Colour is always paired wi
 The Week board (`dashboard/views/week.py`) is the seventh page of the same theme, not a
 second visual language. It shows a seven-day projection from `GET /api/v1/planner/week`.
 
-- **Header:** the same four KPI cards as every other page, then a plan-coverage bar
-  (`quest-progress`) and a row of badges (`quest-badges`). Badges that are not earned stay
-  outlined and muted.
+- **Header:** the same four KPI cards as every other page, then the weekly workload bar
+  (`quest-workload`): the total task count, the completion percentage, a thin progress
+  line, one horizontal bar split into seven day segments (width = task count, colour =
+  risk level), and a legend with the task count per kind. The board starts right after
+  the bar; there is no badge or gamification row above it.
 - **Day column:** `quest-day` panel with the weekday, the date, a risk pill
   (calm/busy/risky), and three lines of projected stock, sales, arrivals, value at risk,
   and expected waste.
-- **Card:** collapsed by default to the kind pill, the quantity, the product name, and a
-  two-line summary. Hovering or focusing a card expands the reasoning, the impact line,
-  and the calculation in place, with a max-height and opacity transition, and lifts the
-  card with a shadow. The "Expand every card" toggle opens all of them at once, which is
-  the touch-friendly path.
+- **Overflow:** a day with more than three tasks shows the first three cards and a
+  `+N more tasks · show all N` button. The button opens a modal (`fs-quest-modal`) listing
+  every task for that day with its reasoning, impact, and calculation; the close (X)
+  button, Escape, and a backdrop click all dismiss it. The hidden cards stay in the DOM
+  (`quest-card-overflow`) so the popup only has to clone them.
+- **Card:** always shows the kind pill, the quantity, the product name, and a two-line
+  summary, so the whole week can be read without interaction. The reasoning, impact, and
+  calculation stay behind one toggle ("Show every task's reasoning"), which opens all
+  cards at once and works with touch and keyboard.
 - **Board rules:** the board is read-only. It never implies that an action happened, and
   it never writes to the ledger. Approvals stay on the Actions page.
-- **Activity calendar:** below the board, a contribution-style heatmap
+- **Activity calendar:** above the weekly workload bar, a contribution-style heatmap
   (`heat-grid`, `heat-cell`) with one column per week and one row per weekday. Darker
   squares are busier days; a red corner means waste was recorded and an amber corner
   means a stockout was recorded. Hovering a square shows the units sold, wasted,
   donated, and the decisions recorded that day.
-- **Responsive:** seven columns on desktop, where each column scrolls on its own so the
-  board never becomes a very long page; Streamlit stacks the columns on narrow screens,
+- **Interaction:** the board does not depend on hover. The workload bar answers "what is
+  left this week" at a glance, and the details toggle opens the reasoning for every card.
+  Cards keep a focus ring and a border highlight on hover, but nothing is hidden behind the
+  pointer.
+- **Responsive:** seven columns on desktop; Streamlit stacks the columns on narrow screens,
   and the day panels become full-width cards.
 
 ## Decisions on the cards
@@ -154,6 +178,7 @@ The theme is split so you can change one layer without touching the others.
 | `dashboard/components.py` | HTML builders: `pill`, `metric_row`, `page_header`, `section_header`, `hero`, `ticker`, `freshness_ladder`, `empty_state`, `note_card`, `confidence`, `status_row`. |
 | `dashboard/app.py` | App shell, CSS/font links, top brand bar, sticky top navigation, setup popover, actor simulation, and page copy (`PAGE_COPY`). |
 | `dashboard/ascii_magic.py` | Loads the ASCII Magic module once and creates the `autumn-forest` element in the fixed page-background layer. |
+| `dashboard/quest_modal.py` | Delegated click handler that turns a day's hidden `quest-card-overflow` cards into a modal with a close (X) button. |
 | `dashboard/views/*.py` | Page content and Altair charts. |
 | `dashboard/static/*.woff2` | Bundled Fraunces and Nunito Sans files; no runtime Google Fonts dependency. |
 
@@ -188,8 +213,10 @@ Credentials remain server-side in environment variables.
   Streamlit sanitises rendered HTML and DOMPurify drops unknown custom elements.
 - The art is decoration only. It is a fixed layer at `z-index: -2`, so it never sits on top of
   a table, and it is scaled to cover the viewport from a 100 x 36 frame.
-- The workspace panel on top of it is solid paper, so every heading, table, and number is
-  read on an opaque surface. The art shows around the panel as a frame.
+- The workspace panel sits on top of it at 50% paper opacity, so the art shows through
+  the panel as a faint texture while every heading, table, and number stays readable.
+- The paper grain lives in its own `body::before` layer at `z-index: -3`, below the art;
+  a body background would paint over a negative z-index backdrop.
 - If the CDN is unreachable the dashboard keeps working: the layer simply stays empty and the
   aged-paper background remains.
 
@@ -197,8 +224,8 @@ Credentials remain server-side in environment variables.
 
 - Moved navigation from the left sidebar to a sticky top bar with a `Setup` popover for the
   API endpoint and actor simulation.
-- Moved the Autumn Forest piece into the real page background and made the workspace panel
-  opaque, so the data always sits on solid paper and the art frames it.
+- Moved the Autumn Forest piece into the real page background and gave the workspace panel
+  50% paper opacity, so the art reads through the surface without fighting the data.
 - Replaced Orbyte blue with the Autumn Bakehouse cream/rust/amber/sage system.
 - Added Fraunces and Nunito Sans, bundled locally for offline and Docker use.
 - Added Material Symbols navigation icons and a custom bakery SVG icon set.

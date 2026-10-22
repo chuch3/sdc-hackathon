@@ -16,6 +16,7 @@ class Schema(BaseModel):
 
 class SupplierInput(Schema):
     name: Name
+    email: str | None = Field(default=None, max_length=254)
     lead_time_days: int = Field(default=2, ge=0)
     moq: Quantity = Decimal("1")
     reliability: Decimal = Field(default=Decimal("0.95"), ge=0, le=1, decimal_places=3)
@@ -301,6 +302,7 @@ class Recommendation(Schema):
 class RecommendationList(Schema):
     as_of: date
     engine: str
+    data_version: int = 0
     recommendations: list[Recommendation]
 
 
@@ -350,6 +352,32 @@ class HolidayOutput(HolidayInput):
     id: int
 
 
+class MarketDayInput(Schema):
+    market_date: date
+    label: str = Field(min_length=1, max_length=100)
+    demand_multiplier: Decimal = Field(gt=0, max_digits=8, decimal_places=3)
+    note: str = Field(default="", max_length=300)
+
+
+class MarketDayOutput(MarketDayInput):
+    id: int
+
+
+class SupplierEmailDraft(Schema):
+    purchase_order_id: int
+    recipient: str | None = None
+    subject: str
+    body: str
+    mailto: str | None = None
+
+
+class PosWebhookEnvelope(Schema):
+    event_id: str = Field(min_length=1, max_length=100)
+    event_type: Literal["sale", "refund", "stockout"]
+    occurred_at: datetime
+    payload: dict
+
+
 class BakePlanRequest(Actor):
     plan_date: date
     product_id: int = Field(gt=0)
@@ -361,6 +389,84 @@ class RecommendationDecisionInput(Actor):
     quantity: NonnegativeQuantity
     edited_quantity: NonnegativeQuantity | None = None
     note: str = Field(default="", max_length=300)
+
+
+class ReadinessCheck(Schema):
+    key: str
+    label: str
+    ok: bool
+    detail: str
+
+
+class ReadinessAction(Schema):
+    label: str
+    page: str
+    reason: str
+
+
+class OnboardingReadiness(Schema):
+    as_of: date
+    stage: Literal["no_products", "no_sales", "thin_history", "ready", "live"]
+    products_active: int
+    products_ready: int
+    valid_days: int
+    required_days: int
+    censored_days: int
+    last_sale_date: date | None = None
+    last_import_at: datetime | None = None
+    checks: list[ReadinessCheck] = Field(default_factory=list)
+    next_action: ReadinessAction
+
+
+class SalesColumnMapping(Schema):
+    date: str | None = None
+    sku: str | None = None
+    quantity: str | None = None
+    daypart: str | None = None
+    stockout: str | None = None
+
+
+class SalesImportPreviewInput(Schema):
+    csv_text: str = Field(min_length=1, max_length=5_000_000)
+    mapping: SalesColumnMapping = Field(default_factory=SalesColumnMapping)
+
+
+class SalesImportCommitInput(SalesImportPreviewInput):
+    request_id: str = Field(min_length=1, max_length=100)
+
+
+class SalesImportIssue(Schema):
+    row: int
+    field: str
+    message: str
+
+
+class SalesImportPreview(Schema):
+    columns: list[str]
+    mapping: SalesColumnMapping
+    total_rows: int
+    valid_rows: int
+    invalid_rows: int
+    duplicate_rows: int
+    unknown_skus: list[str] = Field(default_factory=list)
+    stockout_rows: int
+    date_start: date | None = None
+    date_end: date | None = None
+    valid_days: int
+    can_commit: bool
+    issues: list[SalesImportIssue] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class SalesImportCommit(SalesImportPreview):
+    request_id: str
+    imported_rows: int
+    batches_created: int
+    movements_created: int
+    stockout_events_created: int
+    imported_at: datetime
+    data_version: int
+    replayed: bool = False
 
 
 class PlannerCard(Schema):
@@ -425,6 +531,12 @@ class PlannerProjection(Schema):
     expired_quantity: NonnegativeQuantity = Decimal("0")
 
 
+class PlannerMarketDay(Schema):
+    label: str
+    demand_multiplier: Decimal
+    note: str = ""
+
+
 class PlannerDay(Schema):
     date: date
     weekday: str
@@ -434,6 +546,7 @@ class PlannerDay(Schema):
     cards: list[PlannerCard] = Field(default_factory=list)
     orders_due: list[PlannerOrderDue] = Field(default_factory=list)
     projection: PlannerProjection = Field(default_factory=PlannerProjection)
+    market_day: PlannerMarketDay | None = None
 
 
 class PlannerBadge(Schema):

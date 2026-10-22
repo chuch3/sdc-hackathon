@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from html import escape
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -15,6 +16,7 @@ from dashboard.components import (
     metric_row,
     number,
     pill,
+    readiness_card,
     risk_pill,
     section_header,
     show_error,
@@ -193,17 +195,141 @@ def _card(client, product, rec, actor):
 
 
 def render(client, actor):
+    _live_body(client, actor)
+
+
+def _live_strip(version: int, timezone_name: str) -> None:
+    stamp = datetime.now(ZoneInfo(timezone_name)).strftime("%H:%M:%S")
+    st.markdown(
+        f"""
+        <div class="live-strip">
+          <span class="live-dot"></span>
+          <strong>Live</strong>
+          <span>updated {escape(stamp)}</span>
+          <span class="live-version">v{version}</span>
+          <span class="live-note">auto-refreshes every 30s</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _changed_card(events: list[dict]) -> None:
+    items = "".join(
+        f"<li><strong>{escape(str(event['event_type']).replace('_', ' ').title())}</strong>"
+        f" · {escape(str(event.get('reason') or '')[:140])}</li>"
+        for event in events[:4]
+    )
+    st.markdown(
+        f"""
+        <div class="changed-card">
+          <div class="changed-title">Changed since the last check</div>
+          <ul>{items}</ul>
+          <p>The forecast, expiry ladder, and decisions below were refreshed automatically.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _simulate_sale(client, positions, actor) -> None:
+    saleable = [
+        row for row in positions if float(row["saleable_on_hand"]) >= 1
+    ]
+    if not saleable:
+        st.button(
+            "Simulate a sale",
+            disabled=True,
+            help="No saleable stock is available. Receive stock first.",
+            key="simulate-sale-disabled",
+        )
+        return
+    if not st.button(
+        "Simulate a sale",
+        icon=":material/point_of_sale:",
+        help="Record one sale through the real ledger and watch the live cards update.",
+    ):
+        return
+    product = saleable[0]
     try:
+        result = client.stock_action(
+            {
+                "product_id": product["product_id"],
+                "quantity": "1",
+                "movement_type": "SALE",
+                "request_id": f"demo-sale-{uuid4().hex}",
+                "actor_name": actor["actor_name"],
+                "actor_role": actor["actor_role"],
+                "reason": "Demo live-loop sale",
+                "daypart": "midday",
+            }
+        )
+    except Exception as exc:
+        _flash(str(exc), "error")
+        st.rerun()
+        return
+    _flash(
+        f"Recorded 1 {product['unit']} sale of {product['name']} · "
+        f"{len(result.get('allocations', []))} batch allocation(s)"
+    )
+    st.rerun()
+
+
+@st.fragment(run_every="30s")
+def _live_body(client, actor):
+    try:
+        readiness = client.onboarding()
         positions = client.positions()
         alerts = client.expiry_alerts(3)["alerts"]
-        recommendations = client.recommendations()["recommendations"]
+        recommendation_payload = client.recommendations()
+        recommendations = recommendation_payload["recommendations"]
         buckets = client.expiry_buckets()
         products = {row["id"]: row for row in client.products()}
+        activity = client.activity()
+        timezone_name = client.health()["business_timezone"]
     except Exception as exc:
         show_error(exc)
         return
 
+    version = int(recommendation_payload.get("data_version", 0))
+    previous_version = st.session_state.get("live_data_version")
+    previous_event_id = st.session_state.get("live_event_id", 0)
+    new_events = [event for event in activity if int(event["id"]) > int(previous_event_id)]
+    changed = previous_version is not None and previous_version != version
+    if new_events:
+        st.session_state["live_event_id"] = max(int(event["id"]) for event in new_events)
+    st.session_state["live_data_version"] = version
+
     _show_flash()
+    _live_strip(version, timezone_name)
+    if changed:
+        _changed_card(new_events)
+    readiness_card(readiness)
+    quick_left, quick_middle, quick_right = st.columns(3)
+    if quick_left.button("Print daily sheet", key="today-print-sheet", icon=":material/print:"):
+        st.session_state.page = "Daily sheet"
+        st.rerun()
+    if quick_middle.button("Purchase orders", key="today-purchasing", icon=":material/shopping_basket:"):
+        st.session_state.page = "Purchasing"
+        st.rerun()
+    if quick_right.button("Bake plan", key="today-bakery", icon=":material/bakery_dining:"):
+        st.session_state.page = "Bakery"
+        st.rerun()
+    action = readiness.get("next_action", {})
+    if action.get("page") and action["page"] != "Today":
+        if st.button(
+            action.get("label", "Continue"),
+            key="readiness-cta",
+            type="primary",
+            icon=":material/arrow_forward:",
+        ):
+            st.session_state.page = action["page"]
+            st.rerun()
+    _simulate_sale(client, positions, actor)
+    st.caption(
+        "Forecasts need history. Stockout-censored days are excluded from training, "
+        "and every estimate is labelled."
+    )
 
     physical = sum(float(row["physical_on_hand"]) for row in positions)
     saleable = sum(float(row["saleable_on_hand"]) for row in positions)

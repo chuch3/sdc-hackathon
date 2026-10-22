@@ -1,6 +1,17 @@
+from datetime import date, timedelta
+
 import pytest
 
-from forecast.metrics import bias, evaluate_metrics, mae, mape, wape
+from forecast.baseline import BaselineForecaster
+from forecast.contracts import ForecastContext, Product, SalesObservation
+from forecast.metrics import (
+    backtest_observations,
+    bias,
+    evaluate_metrics,
+    mae,
+    mape,
+    wape,
+)
 
 
 def test_metrics_hand_computed():
@@ -34,3 +45,43 @@ def test_evaluate_metrics_returns_scorecards():
     results = evaluate_metrics([10, 10], [12, 8])
     assert set(results) == {"MAE", "MAPE", "bias", "WAPE"}
     assert results["bias"].value == pytest.approx(0.0)
+
+
+def test_backtest_observations_keep_bounds_and_exclude_censored_days():
+    as_of = date(2026, 1, 28)
+    product = Product(
+        sku="p1",
+        name="Test product",
+        category="dairy",
+        unit="unit",
+        lead_time_days=2,
+        review_period_days=1,
+    )
+    history = [
+        SalesObservation(
+            product_sku="p1",
+            business_date=as_of - timedelta(days=offset),
+            quantity=10.0,
+        )
+        for offset in range(28, -1, -1)
+    ]
+    censored_date = as_of + timedelta(days=3)
+    history.extend(
+        [
+            SalesObservation(
+                product_sku="p1",
+                business_date=as_of + timedelta(days=offset),
+                quantity=10.0,
+                is_stockout_censored=(as_of + timedelta(days=offset) == censored_date),
+            )
+            for offset in range(1, 8)
+        ]
+    )
+    context = ForecastContext(products={"p1": product}, sales_history=tuple(history))
+    observations = backtest_observations(
+        BaselineForecaster(), context, as_of, horizon_days=7
+    )
+    assert len(observations) == 6
+    assert censored_date not in {row.business_date for row in observations}
+    assert all(row.lower <= row.forecast <= row.upper for row in observations)
+    assert all(row.actual == pytest.approx(10.0) for row in observations)

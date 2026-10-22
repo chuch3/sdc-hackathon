@@ -1,8 +1,11 @@
 import csv
+import hashlib
+import hmac
 import io
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import select
@@ -14,13 +17,17 @@ from app.services import (
     analytics,
     bakery,
     inventory,
+    proof,
     purchasing,
+    readiness,
     recommendations,
+    sales_import,
     stock_actions,
     weekly_planner,
 )
 from app.services.common import add_event, require_approver, require_stock_actor
 from app.services.receipts import receive_batch
+from app.services.versioning import data_version
 
 router = APIRouter(prefix="/api/v1")
 DB = Annotated[Session, Depends(get_db)]
@@ -39,6 +46,18 @@ def check_supplier(db, supplier_id):
         supplier = find(db, models.Supplier, supplier_id)
         if not supplier.active:
             raise HTTPException(status_code=409, detail="Supplier is archived")
+
+
+def _pos_signature(secret: str, timestamp: str, body: bytes) -> str:
+    return hmac.new(secret.encode("utf-8"), timestamp.encode("utf-8") + b"." + body, hashlib.sha256).hexdigest()
+
+
+def _pos_product(db, payload: dict):
+    sku = str(payload.get("sku", "")).strip()
+    product = db.scalar(select(models.Product).where(models.Product.sku == sku))
+    if product is None or not product.active:
+        raise HTTPException(status_code=422, detail=f"Unknown active SKU: {sku or 'missing'}")
+    return product
 
 
 @router.get("/suppliers", response_model=list[schemas.SupplierOutput], tags=["Suppliers"])
@@ -273,6 +292,40 @@ def receive_purchase_order(
 
 
 @router.get(
+    "/purchase-orders/{order_id}/supplier-email-draft",
+    response_model=schemas.SupplierEmailDraft,
+    tags=["Purchasing"],
+)
+def supplier_email_draft(order_id: int, db: DB):
+    order = find(db, models.PurchaseOrder, order_id)
+    if order.status in {"CANCELLED", "RECEIVED"}:
+        raise HTTPException(status_code=409, detail="Only open purchase orders can be drafted")
+    supplier = find(db, models.Supplier, order.supplier_id)
+    products = {row.id: row for row in db.scalars(select(models.Product)).all()}
+    lines = [
+        f"- {products[line.product_id].name}: {line.quantity} {products[line.product_id].unit}"
+        for line in order.lines
+        if line.product_id in products
+    ]
+    subject = f"Buns At Work! purchase order #{order.id}"
+    body = "\n".join(
+        [
+            f"Hello {supplier.name},",
+            "",
+            f"Please confirm the following order for delivery on {order.expected_date.isoformat()}:",
+            *lines,
+            "",
+            "Thank you,",
+            "Buns At Work!",
+        ]
+    )
+    mailto = None
+    if supplier.email:
+        mailto = f"mailto:{quote(supplier.email)}?subject={quote(subject)}&body={quote(body)}"
+    return {"purchase_order_id": order.id, "recipient": supplier.email, "subject": subject, "body": body, "mailto": mailto}
+
+
+@router.get(
     "/purchase-orders/{order_id}", response_model=schemas.PurchaseOrderOutput, tags=["Purchasing"]
 )
 def get_purchase_order(order_id: int, db: DB):
@@ -370,6 +423,7 @@ def recommendations_list(
     return {
         "as_of": selected,
         "engine": request.app.state.settings.forecast_engine,
+        "data_version": data_version(db),
         "recommendations": items,
     }
 
@@ -500,6 +554,34 @@ def expiry_scan(db: DB, request: Request):
     return {"event_id": event.id, **payload}
 
 
+@router.get(
+    "/onboarding/readiness",
+    response_model=schemas.OnboardingReadiness,
+    tags=["Onboarding"],
+)
+def onboarding_readiness(db: DB, request: Request):
+    settings = request.app.state.settings
+    return readiness.build_readiness(db, settings, settings.business_today())
+
+
+@router.post(
+    "/imports/sales/preview",
+    response_model=schemas.SalesImportPreview,
+    tags=["Imports"],
+)
+def preview_sales_import(body: schemas.SalesImportPreviewInput, db: DB, request: Request):
+    return sales_import.preview(db, body, request.app.state.settings)
+
+
+@router.post(
+    "/imports/sales/commit",
+    response_model=schemas.SalesImportCommit,
+    tags=["Imports"],
+)
+def commit_sales_import(body: schemas.SalesImportCommitInput, db: DB, request: Request):
+    return sales_import.commit_import(db, body, request.app.state.settings)
+
+
 @router.get("/integrations/orbyte", tags=["Integrations"])
 def orbyte_status(request: Request):
     settings = request.app.state.settings
@@ -511,6 +593,102 @@ def orbyte_status(request: Request):
             "Orbyte can pass actor context or host the dashboard."
         ),
     }
+
+
+@router.get("/market-days", response_model=list[schemas.MarketDayOutput], tags=["Planner"])
+def list_market_days(db: DB, start: date | None = None, end: date | None = None):
+    query = select(models.MarketDay).order_by(models.MarketDay.market_date)
+    if start is not None:
+        query = query.where(models.MarketDay.market_date >= start)
+    if end is not None:
+        query = query.where(models.MarketDay.market_date <= end)
+    return db.scalars(query).all()
+
+
+@router.post("/market-days", response_model=schemas.MarketDayOutput, status_code=201, tags=["Planner"])
+def create_market_day(body: schemas.MarketDayInput, db: DB):
+    row = models.MarketDay(**body.model_dump())
+    db.add(row)
+    commit(db)
+    return row
+
+
+@router.put("/market-days/{market_day_id}", response_model=schemas.MarketDayOutput, tags=["Planner"])
+def update_market_day(market_day_id: int, body: schemas.MarketDayInput, db: DB):
+    row = find(db, models.MarketDay, market_day_id)
+    for key, value in body.model_dump().items():
+        setattr(row, key, value)
+    commit(db)
+    return row
+
+
+@router.delete("/market-days/{market_day_id}", status_code=204, tags=["Planner"])
+def delete_market_day(market_day_id: int, db: DB):
+    db.delete(find(db, models.MarketDay, market_day_id))
+    commit(db)
+    return Response(status_code=204)
+
+
+@router.post("/webhooks/pos", tags=["Integrations"])
+async def pos_webhook(request: Request, db: DB):
+    """Ingest one provider-neutral POS event without giving the POS database access."""
+    settings = request.app.state.settings
+    if not settings.pos_webhook_secret:
+        raise HTTPException(status_code=503, detail="POS webhook is not configured")
+    raw = await request.body()
+    timestamp = request.headers.get("X-Buns-Timestamp", "")
+    signature = request.headers.get("X-Buns-Signature", "").removeprefix("sha256=")
+    try:
+        sent_at = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Invalid webhook timestamp") from exc
+    if abs((datetime.now(timezone.utc) - sent_at).total_seconds()) > settings.pos_webhook_max_age_seconds:
+        raise HTTPException(status_code=401, detail="Webhook timestamp is stale")
+    expected = _pos_signature(settings.pos_webhook_secret, timestamp, raw)
+    if not hmac.compare_digest(signature, expected):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    try:
+        envelope = schemas.PosWebhookEnvelope.model_validate_json(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid webhook JSON") from exc
+    payload_hash = hashlib.sha256(raw).hexdigest()
+    prior = db.scalar(select(models.PosWebhookEvent).where(models.PosWebhookEvent.event_id == envelope.event_id))
+    if prior is not None:
+        if prior.payload_hash != payload_hash:
+            raise HTTPException(status_code=409, detail="event_id was used for different data")
+        return {**prior.result, "replayed": True}
+
+    result: dict
+    try:
+        product = _pos_product(db, envelope.payload)
+        if envelope.event_type == "sale":
+            quantity = Decimal(str(envelope.payload.get("quantity", "0")))
+            action = schemas.StockActionInput(
+                product_id=product.id,
+                quantity=quantity,
+                request_id=f"pos-{envelope.event_id}",
+                movement_type="SALE",
+                daypart=envelope.payload.get("daypart"),
+                actor_name="POS webhook",
+                actor_role="staff",
+                reason=f"POS sale {envelope.event_id}",
+            )
+            result = {"status": "accepted", "event_id": envelope.event_id, "result": stock_actions.apply_stock_action(db, action, settings.business_today())}
+        elif envelope.event_type == "stockout":
+            quantity = Decimal(str(envelope.payload.get("quantity", "0")))
+            if quantity <= 0:
+                raise HTTPException(status_code=422, detail="stockout quantity must be positive")
+            db.add(models.StockoutEvent(product_id=product.id, business_date=settings.business_today(), daypart=envelope.payload.get("daypart"), requested_quantity=quantity, available_quantity=Decimal("0"), source="POS", note=f"POS stockout {envelope.event_id}"))
+            result = {"status": "accepted", "event_id": envelope.event_id, "result": "stockout recorded"}
+        else:
+            result = {"status": "rejected", "event_id": envelope.event_id, "detail": "Refund requires a manager to identify a safe batch; no stock was restored."}
+    except (HTTPException, ArithmeticError, ValueError) as exc:
+        detail = exc.detail if isinstance(exc, HTTPException) else "Invalid POS event quantity"
+        result = {"status": "rejected", "event_id": envelope.event_id, "detail": str(detail)}
+    db.add(models.PosWebhookEvent(event_id=envelope.event_id, event_type=envelope.event_type, payload_hash=payload_hash, result=result))
+    add_event(db, "POS_WEBHOOK", "pos_event", 0, type("Actor", (), {"actor_name": "POS webhook", "reason": envelope.event_id})(), {"event_type": envelope.event_type, "status": result["status"]})
+    commit(db)
+    return result
 
 
 @router.get("/bakery/profiles", tags=["Bakery"])
@@ -633,6 +811,42 @@ def planner_week(db: DB, request: Request, start: date | None = None, days: int 
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/daily-sheet", tags=["Operations"])
+def daily_sheet(db: DB, request: Request):
+    """A compact read-only payload for the floor/bakery print handoff."""
+    settings = request.app.state.settings
+    today = settings.business_today()
+    expiry = inventory.expiry_items(db, today)
+    products = {row.id: row for row in db.scalars(select(models.Product)).all()}
+    recommendations_today = recommendations.recommend_all(db, today, settings)
+    orders = db.scalars(
+        select(models.PurchaseOrder).where(
+            models.PurchaseOrder.status == "APPROVED",
+            models.PurchaseOrder.expected_date <= today,
+        ).order_by(models.PurchaseOrder.expected_date, models.PurchaseOrder.id)
+    ).all()
+    bake = bakery.build_bake_plan(db, today, settings)
+    return {
+        "business_date": today,
+        "expiry_tasks": [item for item in expiry if item["bucket"] in {"expired", "critical", "warning"}],
+        "actions": [
+            item
+            for item in recommendations_today
+            if str(getattr(item.action, "value", item.action)) not in {"HOLD", "REDUCE"}
+        ],
+        "deliveries": [
+            {"order_id": row.id, "expected_date": row.expected_date, "supplier_id": row.supplier_id,
+             "lines": [
+                {"product": products.get(line.product_id).name if products.get(line.product_id) else str(line.product_id), "quantity": line.quantity}
+                for line in row.lines
+             ]}
+            for row in orders
+        ],
+        "bake_plan": bake,
+        "note": "Read-only handoff. Record stock changes through the normal approval workflow.",
+    }
+
+
 @router.get("/holidays", response_model=list[schemas.HolidayOutput], tags=["Bakery"])
 def list_holidays(db: DB):
     return db.scalars(select(models.HolidayCalendar).order_by(models.HolidayCalendar.holiday_date)).all()
@@ -648,8 +862,19 @@ def create_holiday(body: schemas.HolidayInput, db: DB):
 
 
 @router.get("/analytics/impact", tags=["Impact"])
-def impact(db: DB, days: int = Query(30, ge=1, le=365)):
-    return analytics.impact_summary(db, days)
+def impact(db: DB, request: Request, days: int = Query(30, ge=1, le=365)):
+    settings = request.app.state.settings
+    return analytics.impact_summary(
+        db,
+        days,
+        as_of=settings.business_today(),
+        settings=settings,
+    )
+
+
+@router.get("/analytics/proof", tags=["Impact"])
+def proof_of_impact(db: DB, request: Request, days: int = Query(14, ge=7, le=60)):
+    return proof.build_proof(db, request.app.state.settings, days)
 
 
 @router.get("/analytics/activity-calendar", tags=["Impact"])

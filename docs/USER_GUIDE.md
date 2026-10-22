@@ -46,7 +46,20 @@ The Today screen shows the most urgent work:
 If the screen says **API not ready**, ask an administrator to start the backend. Do not
 enter stock in a spreadsheet in the meantime; that would break the audit trail.
 
-### 2. Check **Expiry**
+### 2. Import missing sales history
+
+The **Data check** card at the top tells you whether the forecast can be trusted. If it
+says the history is missing or thin, the system deliberately refuses to give a confident
+recommendation. Open **Settings → Import sales**, upload or load the sample CSV, preview
+the reported issues, and import the valid rows. Importing history never changes today's
+saleable stock.
+
+When sales are flowing, Today refreshes itself every 30 seconds. The **Live** strip shows
+the update time and data version. After a sale or a newly imported row, a **Changed since
+the last check** card explains what moved. Use **Simulate a sale** to demonstrate the loop
+on the demo database.
+
+### 3. Check **Expiry**
 
 The Expiry screen groups batches by urgency:
 
@@ -60,7 +73,7 @@ The Expiry screen groups batches by urgency:
 Sell the critical items first. If the item will not sell in time, mark it down or donate it
 before it becomes waste.
 
-### 3. Review **Recommendations**
+### 4. Review **Recommendations**
 
 Each recommendation has a plain-language reason and a suggested action:
 
@@ -77,7 +90,7 @@ can approve, edit, or reject. If you edit, record why. The original suggestion i
 Once you decide, the card keeps the outcome: it shows an **Approved**, **Edited**, or
 **Rejected** label with your name and the time, so the same decision is never asked twice.
 
-### 4. Use **Purchasing**
+### 5. Use **Purchasing**
 
 Purchase orders are created as drafts. A manager approves them before they are sent. When
 a delivery arrives, record the actual quantity and expiry date so the batches are correct.
@@ -85,7 +98,7 @@ a delivery arrives, record the actual quantity and expiry date so the batches ar
 Do not approve an order just because the system suggests it. Check the supplier, the
 delivery date, and whether similar stock is already on its way.
 
-### 5. Look ahead on **Week board**
+### 6. Look ahead on **Week board**
 
 The Week board is a seven-day plan built from today's stock, the approved orders, and the
 forecast. Each day shows the projected stock, what arrives, and a short list of cards:
@@ -108,7 +121,7 @@ Two things to remember:
 - The money on the board is a **cost-based estimate** built from what the shop paid, not
   from selling prices.
 
-### 6. Plan the bakery on **Bakery**
+### 7. Plan the bakery on **Bakery**
 
 The Bakery screen splits the daily bake into morning, midday, and afternoon. It respects
 the maximum daily quantity and the shop's usual daypart mix. A baker can save a draft; a
@@ -117,9 +130,18 @@ manager approves the plan.
 Seasonal advice shows which ingredients are in season and locally available. Treat it as
 a suggestion, not a rule.
 
-### 7. Show the result on **Impact**
+### 8. Show the result on **Impact**
 
-The Impact screen estimates:
+The top of the Impact screen is the **Impact proof** panel. It shows how accurate the
+forecast was on the most recent holdout window: WAPE, bias, 80% interval coverage, how many
+days were scored, and how many stockout-censored days were excluded. Below that are the
+sales, waste, donation, CO2e, and meal estimates actually recorded in the window.
+
+The **Run-rate** panel annualises the observed window. It is a scale reference, not a
+promise that the system saved that amount. Causal proof needs a controlled switchback test;
+the plan is in `docs/AB_TEST_PLAN.md`.
+
+The Impact screen also estimates:
 
 - kilograms of food waste,
 - kilograms donated,
@@ -204,6 +226,20 @@ dashboard still works. The **Dark mode** button at the end of the top navigation
 whole workspace (and the art) to the night palette; it switches back to **Light mode**. The design tokens, layout, and the editable CSS scaffold
 (`dashboard/static/theme.css`) are documented in `docs/UI_DESIGN.md`.
 
+## Daily operations workspace
+
+Use **Today** as the daily command centre. It holds the live decision queue and links to the
+purchase, bake, and printable handoff workflows. **Week** contains the projection plus the
+market-day editor; **Stock** is the ledger workspace; **Insights** holds evidence and impact.
+
+Choose **Daily sheet** to print or save a concise floor/bakery handoff. It is read-only and
+does not approve work or change stock. Supplier email drafts open from an open purchase order;
+they can be copied or handed to the local mail client, but Buns At Work! never sends email.
+
+For keyboard use, move with Tab/Shift+Tab, activate controls with Enter/Space, and use Escape
+to leave dialogs. `Ctrl/Cmd+K` returns focus to primary navigation; `?` shows a reminder.
+See `CHANGES.md` and `docs/UI_CUSTOMIZATION.md` for setup and design guidance.
+
 ## Running the demo
 
 From the repository root:
@@ -223,6 +259,17 @@ uv run streamlit run dashboard/app.py
 ```
 
 Open `http://localhost:8501`. The API documentation is at `http://127.0.0.1:8000/docs`.
+
+To open on the data-trust story instead of the full dataset, seed without sales history:
+
+```bash
+uv run python -m scripts.seed --skip-history
+```
+
+Then import `docs/samples/messy_sales.csv` from **Settings → Import sales**. It contains six
+weeks of sales for every demo SKU plus a few deliberate data problems, so the import,
+readiness, and impact proof all have enough history. Use `--history-days N` to create a
+different amount of synthetic history. The full demo script is in `docs/DEMO_SCRIPT.md`.
 
 To reset the demo, stop the API, delete `backend/data/inventory.db`, and run the migration
 and seed again. Never do this with live shop data.

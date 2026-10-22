@@ -89,6 +89,25 @@ class ApiClient:
     def expiry_alerts(self, horizon_days: int = 3):
         return self.get("expiry/alerts", {"horizon_days": horizon_days})
 
+    def onboarding(self):
+        return self.get("onboarding/readiness")
+
+    def preview_sales_import(self, csv_text: str, mapping: dict | None = None):
+        return self.post(
+            "imports/sales/preview",
+            {"csv_text": csv_text, "mapping": mapping or {}},
+        )
+
+    def commit_sales_import(self, csv_text: str, request_id: str, mapping: dict | None = None):
+        return self.post(
+            "imports/sales/commit",
+            {
+                "csv_text": csv_text,
+                "mapping": mapping or {},
+                "request_id": request_id,
+            },
+        )
+
     def recommendations(self, domain: str | None = None):
         params = {}
         if domain:
@@ -101,8 +120,27 @@ class ApiClient:
             params["start"] = start
         return self.get("planner/week", params)
 
+    def daily_sheet(self):
+        return self.get("daily-sheet")
+
+    def market_days(self, start: str | None = None, end: str | None = None):
+        params = {key: value for key, value in {"start": start, "end": end}.items() if value}
+        return self.get("market-days", params)
+
+    def create_market_day(self, payload: dict):
+        return self.post("market-days", payload)
+
+    def update_market_day(self, market_day_id: int, payload: dict):
+        return self.put(f"market-days/{market_day_id}", payload)
+
+    def delete_market_day(self, market_day_id: int):
+        return self._request("DELETE", f"market-days/{market_day_id}")
+
     def activity_calendar(self, days: int = 120):
         return self.get("analytics/activity-calendar", {"days": days})
+
+    def proof(self, days: int = 14):
+        return self.get("analytics/proof", {"days": days})
 
     def recommend(self, product_id: int):
         return self.get(f"recommendations/{product_id}")
@@ -121,6 +159,9 @@ class ApiClient:
 
     def purchase_orders(self):
         return self.get("purchase-orders")
+
+    def supplier_email_draft(self, order_id: int):
+        return self.get(f"purchase-orders/{order_id}/supplier-email-draft")
 
     def create_purchase_order(self, payload: dict):
         return self.post("purchase-orders", payload)

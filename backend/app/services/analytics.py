@@ -17,7 +17,15 @@ DECISION_EVENTS = (
 )
 
 
-def impact_summary(db, days: int = 30) -> dict:
+def impact_summary(
+    db,
+    days: int = 30,
+    as_of: date | None = None,
+    settings: Settings | None = None,
+) -> dict:
+    settings = settings or Settings()
+    selected = as_of or settings.business_today()
+    start = utc_start(selected - timedelta(days=days - 1), settings)
     rows = db.execute(
         select(
             models.Product.id,
@@ -29,7 +37,10 @@ def impact_summary(db, days: int = 30) -> dict:
             func.sum(models.StockMovement.quantity_delta),
         )
         .join(models.Product)
-        .where(models.StockMovement.movement_type.in_(["WASTE", "DONATION"]))
+        .where(
+            models.StockMovement.movement_type.in_(["WASTE", "DONATION"]),
+            models.StockMovement.occurred_at >= start,
+        )
         .group_by(
             models.Product.id,
             models.Product.sku,
@@ -69,6 +80,7 @@ def impact_summary(db, days: int = 30) -> dict:
             meals += item["donation"] * factor.meals_per_kg_donated
             co2e += item["waste"] * factor.kg_co2e_per_kg_waste
     return {
+        "as_of": selected.isoformat(),
         "window_days": days,
         "assumption": (
             "Estimated impact: 1 stock unit is treated as 1 kg unless the team adds measured "

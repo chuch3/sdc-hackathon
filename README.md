@@ -1,5 +1,10 @@
 # Perishable Food Inventory System — 5-Day Build Plan
 
+> **FreshStock is a data-trust loop for small food shops.** It refuses to guess when
+> history is missing, imports a messy sales CSV without inventing saleable stock, refreshes
+> the shop's decisions from the live ledger, and separates forecast accuracy from causal
+> impact claims. A person still approves every buying, baking, markdown, or donation action.
+
 ## Assumptions
 
 - Greenfield project, ~25 person-days total (5 people × 5 days × ~6 focused hours).
@@ -28,6 +33,12 @@ The system answers three questions:
 - Bakery mode: daily bake plan, daypart demand, seasonal ingredient advice.
 - SDG impact dashboard.
 - Seed data, tests, README, and demo script.
+- Data-readiness stages with a safe refusal and next action instead of a fake forecast.
+- CSV sales import with preview, skipped-row reporting, stockout markers, and idempotent
+  commits that never alter today's saleable stock.
+- A 30-second live loop with a data version and a changed-since card.
+- Impact proof that reports holdout accuracy, observed outcomes, and a clearly labelled
+  run-rate, plus a switchback A/B plan for causal attribution.
 
 ### Defer / out of scope
 
@@ -311,6 +322,8 @@ This is a daily food-waste and stock helper for a small bakery or food shop. It 
 
 A person approves every action that costs money or affects customers. Every decision is logged so the shop can learn from it and show what happened.
 
+The current demo goes one step further than a forecast: it shows whether the data is ready, imports a messy CSV safely, refreshes from the live ledger, and separates measured forecast accuracy from an honest, labelled impact projection.
+
 ## The SME problem
 
 An independent bakery or small food shop decides what to buy and bake from memory, habit, and a spreadsheet. It cannot see, batch by batch, what will expire first, how much will sell before then, or which products are already over-ordered.
@@ -435,6 +448,11 @@ The existing sections stay intact. The 5-day plan only needs small notes: Day 1 
 ## Start here for the working demo
 
 - `docs/USER_GUIDE.md` — client, manager, and stakeholder guide, including the SDG link.
+- `docs/DATA_IMPORT.md` — accepted CSV aliases, mixed date handling, the preview/commit API,
+  and what an import writes.
+- `docs/AB_TEST_PLAN.md` — store-week switchback design, primary metrics, guardrails,
+  bootstrap confidence intervals, and the one-store limit.
+- `docs/DEMO_SCRIPT.md` — the six-minute data-trust demo.
 - `docs/EXPLAINER.md` — technical plain-English walkthrough.
 - `docs/UI_DESIGN.md` — Autumn Bakehouse tokens, layout, motion rules, and the editable CSS scaffold.
 - `IDEAS.md` — the weekly quest board plan, the decisions behind it, and what is shipped.
@@ -466,3 +484,8 @@ Without Docker, run the API and the dashboard in two terminals from the reposito
 cd backend && uv run python -m alembic upgrade head && uv run python -m scripts.seed && uv run python -m scripts.start
 uv run streamlit run dashboard/app.py
 ```
+
+For the data-trust demo, replace the seed command with
+`uv run python -m scripts.seed --skip-history`, open **Settings → Import sales**, and load
+`docs/samples/messy_sales.csv` or the generated sample. `--history-days N` controls how much
+synthetic history the seed creates.

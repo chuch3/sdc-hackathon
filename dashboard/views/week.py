@@ -121,6 +121,14 @@ def _day_html(day: dict) -> str:
         f"<div class='quest-day-stat'>At risk ${number(float(kpis.get('value_at_risk', 0)), 2)}"
         f" · waste ${number(float(kpis.get('expected_waste', 0)), 2)}</div>"
     )
+    market = day.get("market_day")
+    market_html = ""
+    if market:
+        market_html = (
+            f'<div class="market-day"><strong>Market day · {escape(market.get("label", ""))}</strong>'
+            f' · ×{escape(str(market.get("demand_multiplier", "1")))}'
+            f'{" · " + escape(market.get("note", "")) if market.get("note") else ""}</div>'
+        )
     if cards:
         empty = ""
     elif kpis.get("stockout_risk") in {"high", "medium"}:
@@ -135,6 +143,7 @@ def _day_html(day: dict) -> str:
         <span class="pill {tone}">{escape(RISK_LABEL.get(risk, risk))}</span>
       </div>
       <div class="quest-day-stats">{stock}</div>
+      {market_html}
       {f'<ul class="quest-orders">{orders}</ul>' if orders else ''}
       {cards or empty}
       {more}
@@ -254,9 +263,33 @@ def _calendar_html(calendar: dict) -> str:
 def render(client, actor):
     try:
         plan = client.planner_week()
+        markets = client.market_days(plan.get("start_date"), plan.get("end_date"))
     except Exception as exc:
         show_error(exc)
         return
+
+    with st.expander("Market days", expanded=False):
+        st.caption("A market day multiplies forecast demand for its date and appears on this board.")
+        with st.form("market-day-form", clear_on_submit=True):
+            add_date = st.date_input("Market date", value=date.fromisoformat(plan["start_date"]))
+            add_label = st.text_input("Label", value="Saturday market")
+            add_multiplier = st.number_input("Demand multiplier", min_value=0.1, value=1.2, step=0.05)
+            add_note = st.text_input("Operational note", value="")
+            if st.form_submit_button("Add market day", type="primary"):
+                try:
+                    client.create_market_day({"market_date": add_date.isoformat(), "label": add_label, "demand_multiplier": str(add_multiplier), "note": add_note})
+                    st.rerun()
+                except Exception as exc:
+                    show_error(exc)
+        for market in markets:
+            left, right = st.columns([5, 1])
+            left.caption(f"{market['market_date']} · {market['label']} · ×{market['demand_multiplier']} {market.get('note', '')}")
+            if right.button("Remove", key=f"remove-market-{market['id']}"):
+                try:
+                    client.delete_market_day(market["id"])
+                    st.rerun()
+                except Exception as exc:
+                    show_error(exc)
 
     summary = plan.get("weekly_summary", {})
     metric_row(

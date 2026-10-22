@@ -256,6 +256,41 @@ def confidence(value: float) -> str:
     return f'<div class="confidence"><span style="width:{pct:.0f}%"></span></div>'
 
 
+READINESS_TITLE = {
+    "no_products": "Add products to begin",
+    "no_sales": "Waiting for sales history",
+    "thin_history": "Learning from a short history",
+    "ready": "Forecast ready",
+    "live": "Live today",
+}
+
+
+def readiness_card(data: dict) -> None:
+    stage = str(data.get("stage", "no_products"))
+    tone = "green" if stage in {"ready", "live"} else "amber"
+    if stage == "no_products":
+        tone = "red"
+    checks = "".join(
+        f'<span class="readiness-check {"ok" if item.get("ok") else "warn"}">'
+        f'{icon("check" if item.get("ok") else "alert", 12)} '
+        f'{escape(str(item.get("label", "")))}: {escape(str(item.get("detail", "")))}</span>'
+        for item in data.get("checks", [])
+    )
+    st.markdown(
+        f"""
+        <div class="readiness-card {tone}">
+          <div class="readiness-head">
+            <span class="readiness-title">{escape(READINESS_TITLE.get(stage, stage.replace("_", " ").title()))}</span>
+            <span class="readiness-stage">{escape(stage.replace("_", " ").upper())}</span>
+          </div>
+          <p>{escape(str(data.get("next_action", {}).get("reason", "")))}</p>
+          <div class="readiness-checks">{checks}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def status_row(label: str, value: str) -> str:
     return (
         f'<div class="status-row"><span>{escape(label)}</span>'

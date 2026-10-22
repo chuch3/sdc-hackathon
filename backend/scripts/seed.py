@@ -430,6 +430,12 @@ HOLIDAYS = [
     ("Fictional Founders' Day market (last year)", -30, "1.25"),
 ]
 
+# Separate from holidays: these are shop-configured local trading events.
+MARKET_DAYS = [
+    ("Fictional Saturday farmers market", 2, "1.18", "Open the morning bake counter early."),
+    ("Fictional neighbourhood night market", 9, "1.12", "Prepare smaller late-day batches."),
+]
+
 SEASONAL_INGREDIENTS = [
     ("Fictional Sugar Pumpkin", [10, 11, 12], "0.900", "0.950", True),
     ("Fictional Walnuts", [10, 11, 12], "0.850", "1.100", True),
@@ -503,9 +509,10 @@ def _movement(db, product_id, batch_id, kind, delta, when, reason, daypart=None,
     )
 
 
-def seed(database_url=None, as_of=None):
+def seed(database_url=None, as_of=None, include_history=True, history_days=HISTORY_DAYS):
     settings = Settings()
     today = as_of or settings.business_today()
+    history_days = max(0, history_days) if include_history else 0
     engine = build_engine(database_url or settings.database_url)
     try:
         with session_factory(engine)() as db:
@@ -645,7 +652,7 @@ def seed(database_url=None, as_of=None):
             # Daily history so the baseline forecaster has something to learn from.
             rng = Random(42)
             by_sku = {product.sku: product for product in products}
-            for days_ago in range(HISTORY_DAYS, 0, -1):
+            for days_ago in range(history_days, 0, -1):
                 business_day = today - timedelta(days=days_ago)
                 for product in products:
                     spec = next(item for item in PRODUCTS if item[0] == product.sku)
@@ -791,6 +798,16 @@ def seed(database_url=None, as_of=None):
                     )
                 )
 
+            for label, offset, multiplier, note in MARKET_DAYS:
+                db.add(
+                    models.MarketDay(
+                        market_date=today + timedelta(days=offset),
+                        label=label,
+                        demand_multiplier=Decimal(multiplier),
+                        note=note,
+                    )
+                )
+
             # A finished bake plan yesterday and a draft for today.
             for product in products:
                 if product.domain != "bakery":
@@ -826,7 +843,7 @@ def seed(database_url=None, as_of=None):
                         "as_of": today.isoformat(),
                         "synthetic": True,
                         "products": len(products),
-                        "history_days": HISTORY_DAYS,
+                        "history_days": history_days,
                     },
                 )
             )
@@ -842,7 +859,8 @@ def seed(database_url=None, as_of=None):
             db.commit()
             print(
                 f"Seed complete for {today}: {len(suppliers)} suppliers, {len(products)} products, "
-                f"{HISTORY_DAYS} days of history, {len(PURCHASE_ORDERS)} purchase orders."
+                f"{history_days} days of history, "
+                f"{len(PURCHASE_ORDERS)} purchase orders."
             )
             print("All records are fictional. SDG factors are illustrative placeholders.")
     finally:
@@ -852,5 +870,20 @@ def seed(database_url=None, as_of=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--as-of", type=date.fromisoformat, help="Optional YYYY-MM-DD seed date")
+    parser.add_argument(
+        "--skip-history",
+        action="store_true",
+        help="Create products, opening stock, and orders without sales history.",
+    )
+    parser.add_argument(
+        "--history-days",
+        type=int,
+        default=HISTORY_DAYS,
+        help="Number of synthetic sales-history days to create.",
+    )
     args = parser.parse_args()
-    seed(as_of=args.as_of)
+    seed(
+        as_of=args.as_of,
+        include_history=not args.skip_history,
+        history_days=args.history_days,
+    )

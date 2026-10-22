@@ -14,12 +14,125 @@ from dashboard.components import (
 )
 
 
+def _percent(value, places: int = 1) -> str:
+    if value is None:
+        return "n/a"
+    return f"{float(value) * 100:.{places}f}%"
+
+
+def _proof_section(proof: dict) -> None:
+    accuracy = proof["accuracy"]
+    observed = proof["observed"]
+    projection = proof["projection"]
+    section_header(
+        "Impact proof",
+        f"Holdout accuracy for the last {proof['window_days']} days, "
+        f"cut off {proof['cutoff']}",
+        "check",
+    )
+    metric_row(
+        [
+            (
+                "Forecast WAPE",
+                _percent(accuracy["wape"]),
+                "Lower is better · censored days excluded",
+                "chart",
+                "eucalyptus",
+            ),
+            (
+                "Forecast bias",
+                "n/a" if accuracy["bias"] is None else f"{accuracy['bias']:+.2f}",
+                "Positive means over-forecasting",
+                "scale",
+                "amber",
+            ),
+            (
+                "80% coverage",
+                _percent(accuracy["coverage_80"]),
+                "Actual inside the forecast range",
+                "check",
+                "sage",
+            ),
+            (
+                "Observations",
+                number(accuracy["observations"], 0),
+                f"{accuracy['excluded_censored']} censored day(s) excluded",
+                "clock",
+                "",
+            ),
+        ]
+    )
+    left, right = st.columns([1.2, 1])
+    with left:
+        section_header(
+            "Observed",
+            f"Recorded in the last {proof['window_days']} days",
+            "basket",
+        )
+        metric_row(
+            [
+                (
+                    "Sales",
+                    number(observed["sales_units"], 0),
+                    "Units sold",
+                    "receipt",
+                    "",
+                ),
+                (
+                    "Waste",
+                    number(observed["waste_units"], 0),
+                    "Units written off",
+                    "alert",
+                    "berry",
+                ),
+                (
+                    "Donated",
+                    number(observed["donation_units"], 0),
+                    "Units given safely",
+                    "heart",
+                    "sage",
+                ),
+            ]
+        )
+        st.caption(
+            f"{observed['stockout_events']} stockout event(s) · "
+            f"{number(observed['estimated_co2e_kg'], 1)} kg CO2e estimated"
+        )
+    with right:
+        section_header("Run-rate", projection["basis"], "chart")
+        st.markdown(
+            f"""
+            <div class="status-grid">
+              <div class="status-row"><span>Annualised waste</span>
+                <strong>{number(projection['annualised_waste_units'], 0)} units</strong></div>
+              <div class="status-row"><span>Annualised donations</span>
+                <strong>{number(projection['annualised_donation_units'], 0)} units</strong></div>
+              <div class="status-row"><span>Annualised CO2e</span>
+                <strong>{number(projection['annualised_estimated_co2e_kg'], 0)} kg</strong></div>
+              <div class="status-row"><span>Annualised meals</span>
+                <strong>{number(projection['annualised_estimated_meals'], 0)}</strong></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            f"Model {proof['model']['forecaster']} · {proof['model']['interval']} "
+            "interval · causal attribution needs the switchback test."
+        )
+    with st.expander("Backtest assumptions", expanded=False):
+        for line in proof["assumptions"]:
+            st.write(f"- {line}")
+
+
 def render(client, actor):
     try:
         impact = client.get("analytics/impact", {"days": 30})
+        proof = client.proof(14)
     except Exception as exc:
         show_error(exc)
         return
+    _proof_section(proof)
+    section_header("Latest 30 days", "Estimated waste, donation, and community impact", "leaf")
     metric_row(
         [
             (

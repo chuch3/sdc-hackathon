@@ -11,7 +11,7 @@ include `actor_name`, `actor_role`, and `reason`.
 
 | Method | Path | Behaviour |
 |---|---|---|
-| GET | `/health` (outside `/api/v1`) | DB/schema readiness, timezone, business date. |
+| GET | `/health` (outside `/api/v1`) | DB/schema readiness, timezone, business date, and monotonic `data_version`. |
 | GET, POST | `/suppliers` | List/create. `include_archived=true` includes inactive. |
 | GET, PUT, DELETE | `/suppliers/{id}` | Read/replace/archive. DELETE preserves references. |
 | GET, POST | `/products` | List/create. `offset=0&limit=100`; maximum 2000. |
@@ -33,7 +33,7 @@ include `actor_name`, `actor_role`, and `reason`.
 | GET | `/expiry/buckets` | Expired/critical/warning/healthy totals. |
 | GET | `/expiry/alerts` | Batches inside the near-expiry horizon. |
 | POST | `/expiry/scan` | Record an expiry scan audit event. |
-| GET | `/recommendations` | All active-product recommendations for a date. |
+| GET | `/recommendations` | All active-product recommendations for a date, with `data_version`. |
 | GET | `/recommendations/{product_id}` | One recommendation with calculation and forecast. |
 | POST | `/recommendations/{product_id}/decision` | Approve/edit/reject and log the decision. |
 | GET | `/planner/week` | Read-only seven-day projection: daily stock, arrivals, and action cards. |
@@ -42,7 +42,11 @@ include `actor_name`, `actor_role`, and `reason`.
 | POST | `/bakery/bake-plan/{product_id}/approve` | Approve the draft for a date. |
 | GET | `/bakery/seasonal-advice` | In-season ingredient advice for the current month. |
 | GET, POST | `/holidays` | List/create holiday calendar overrides. |
-| GET | `/analytics/impact` | Estimated waste, donation, meals, and CO2e. |
+| GET | `/analytics/impact` | Estimated waste, donation, meals, and CO2e for `days`. |
+| GET | `/analytics/proof` | Holdout accuracy, observed impact, annual run-rate, and assumptions for `days` (7–60). |
+| GET | `/onboarding/readiness` | Data-trust stage, checks, usable/censored days, and the next action. |
+| POST | `/imports/sales/preview` | Validate a JSON CSV payload and report row issues without writing. |
+| POST | `/imports/sales/commit` | Import valid rows as closed historical batches, movements, and stockout markers; idempotent by `request_id`. |
 | GET | `/analytics/activity-calendar` | One bucket per business day for the activity heatmap. |
 | GET | `/integrations/orbyte` | Whether the optional Orbyte link is configured. |
 | GET | `/activity` | Recent approval/status events. |
@@ -102,6 +106,56 @@ The Streamlit dashboard calls HTTP only and never opens SQLite directly. It uses
 surfaces API errors, and shows estimates with their assumptions. The actor fields are
 simulated roles; do not treat them as authentication.
 
+## Data readiness and sales import
+
+`GET /onboarding/readiness` is the source of truth for whether a forecast is trustworthy.
+It uses a 28-day window and 14 usable days:
+
+- `no_products` — no active products.
+- `no_sales` — products exist but no usable sale days.
+- `thin_history` — fewer than 14 usable days.
+- `ready` — enough history and no sale today.
+- `live` — ready, with a sale recorded today.
+
+Days with a `StockoutEvent` are removed from that product's usable days, so one SKU's
+empty shelf does not censor another SKU. `valid_days` is the union of usable product-days;
+`censored_days` counts distinct censored dates. `next_action` names the page and label the
+dashboard should offer.
+
+`POST /imports/sales/preview` accepts `csv_text`, an optional `mapping`, and no file
+upload. Required columns are date, SKU, and quantity; daypart and stockout are optional.
+Auto-detection recognises `business_date`, `item_code`, `units`, `part_of_day`, and
+`stock_out`, among other aliases. Mixed date formats are accepted and ambiguous values are
+read day-first. The response reports valid, invalid, and duplicate rows, unknown SKUs,
+usable days, and the first 50 issues. Preview never writes.
+
+`POST /imports/sales/commit` adds `request_id`. A commit writes one closed
+`IMPORT-HIST-{request_id}-{sku}` batch per SKU, one `RECEIPT` movement, dated `SALE`
+movements, and one `StockoutEvent` per flagged row. It never touches saleable stock.
+Reusing a request ID with the same payload replays the stored result; reusing it with
+different CSV content returns 409. See `docs/DATA_IMPORT.md` for the full format.
+
+## Live updates and proof
+
+`data_version` is the maximum ID across the movement, batch, stockout, stock-action,
+purchase-order, and activity tables. It changes whenever inventory or decision data
+changes. The dashboard polls `/recommendations` and the activity feed on a 30-second
+fragment and shows a changed-since card when the version moves.
+
+`GET /analytics/proof?days=14` runs a single-cutoff holdout backtest over the shared
+forecast package. It scores the last `days` completed business days, excluding today
+because it is incomplete. It returns:
+
+- `accuracy`: WAPE, bias, MAE, 80% interval coverage, observation count, excluded censored
+  observations, and products evaluated.
+- `observed`: sales, waste, donations, estimated CO2e/meals, and stockout events in the
+  window.
+- `projection`: annual run-rate of the observed window, explicitly not a causal claim.
+- `assumptions`: method and factor caveats.
+
+`GET /analytics/impact` honours `days` and filters `occurred_at` from the first instant of
+the selected window.
+
 ## Decisions and the activity calendar
 
 - `POST /recommendations/{product_id}/decision` records the decision in the activity log.
@@ -132,6 +186,22 @@ simulated roles; do not treat them as authentication.
 - Money figures use batch unit cost, not retail price. They are cost-based estimates and
   the response states its assumptions in `assumptions`.
 - The planner is deterministic: the same ledger state produces the same week.
+
+## Operations-first additions
+
+- `GET/POST /market-days`, `PUT/DELETE /market-days/{id}` manage one local market event per
+  date. A market event has `market_date`, `label`, `demand_multiplier`, and `note`. Its
+  multiplier is combined with any holiday multiplier and appears as `market_day` on the
+  matching planner day.
+- `GET /daily-sheet` is a read-only floor/bakery handoff payload. It groups today's expiry
+  tasks, recommendations, approved deliveries, and bake plan; it never writes the ledger.
+- `GET /purchase-orders/{id}/supplier-email-draft` returns an editable plain-text draft and,
+  where the supplier has an email, a `mailto` URL. It does not send mail.
+- `POST /webhooks/pos` accepts one JSON envelope with `event_id`, `event_type`,
+  `occurred_at`, and `payload`. It requires Unix `X-Buns-Timestamp` and an
+  `X-Buns-Signature` HMAC of `timestamp + '.' + raw body` using `POS_WEBHOOK_SECRET`.
+  Sales use FEFO, stockouts are logged, and refunds are deliberately rejected until a manager
+  identifies a safe batch. `event_id` is idempotent.
 
 ## Smoke test
 

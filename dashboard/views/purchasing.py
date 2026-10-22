@@ -159,6 +159,23 @@ def render(client, actor):
                         st.rerun()
                     except Exception as exc:
                         show_error(exc)
+            if order["status"] in {"DRAFT", "APPROVED"}:
+                if st.button(
+                    "Supplier email draft",
+                    key=f"email-draft-{order['id']}",
+                    icon=":material/mail:",
+                ):
+                    try:
+                        st.session_state[f"email-draft-{order['id']}"] = client.supplier_email_draft(order["id"])
+                    except Exception as exc:
+                        show_error(exc)
+                draft = st.session_state.get(f"email-draft-{order['id']}")
+                if draft:
+                    st.caption(f"To: {draft.get('recipient') or 'Add a supplier email in the API first'}")
+                    st.text_input("Subject", value=draft["subject"], key=f"email-subject-{order['id']}")
+                    st.text_area("Editable draft", value=draft["body"], key=f"email-body-{order['id']}", height=180)
+                    if draft.get("mailto"):
+                        st.link_button("Open mail client", draft["mailto"], icon=":material/open_in_new:")
             if order["status"] == "APPROVED":
                 with st.form(f"receive-po-{order['id']}"):
                     _receive_form(client, order, products, actor)

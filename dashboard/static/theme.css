@@ -198,6 +198,45 @@ a {
   background: var(--amber-soft);
   color: var(--ink);
 }
+
+/* Keyboard-first operation: native Streamlit widgets remain in the tab order,
+   and the ring is intentionally stronger than the decorative hover states. */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 3px solid var(--amber) !important;
+  outline-offset: 3px;
+}
+
+.market-day {
+  margin: 0.55rem 0;
+  padding: 0.45rem 0.55rem;
+  border-left: 3px solid var(--amber);
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+  font-size: 0.8rem;
+}
+
+.daily-sheet {
+  max-width: 760px;
+  padding: 1rem 1.25rem;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.daily-sheet h2 { margin-bottom: 0.2rem; }
+.daily-sheet h3 { margin: 1rem 0 0.25rem; font-size: 1.05rem; }
+.daily-sheet ul { margin: 0; padding-left: 1.2rem; }
+
+@media print {
+  body, .stApp, [data-testid="stAppViewContainer"] { background: #fff !important; color: #111 !important; }
+  [data-testid="stHeader"], [data-testid="stToolbar"], #top-bar, #top-nav,
+  button, [data-testid="stSidebar"], .stToast, .live-strip { display: none !important; }
+  .block-container { max-width: none !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: #fff !important; }
+  .block-container::before { display: none !important; }
+  .daily-sheet { max-width: none !important; border: 0 !important; padding: 0 !important; }
+  .daily-sheet h2, .daily-sheet h3, .daily-sheet p, .daily-sheet li { color: #111 !important; }
+}
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
@@ -2293,3 +2332,81 @@ html[data-fs-theme="dark"] .st-key-theme-toggle button {
   border-color: var(--line-strong);
   background: var(--paper-2);
 }
+
+.readiness-card {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--amber);
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+  margin: 0.2rem 0 0.9rem;
+  box-shadow: var(--shadow-soft);
+}
+.readiness-card.green { border-left-color: var(--eucalyptus); }
+.readiness-card.red { border-left-color: var(--berry); }
+.readiness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.readiness-title { font-weight: 700; color: var(--ink); }
+.readiness-stage {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+}
+.readiness-card p { margin: 0.35rem 0 0.55rem; color: var(--ink-soft); }
+.readiness-checks { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.readiness-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+}
+.readiness-check.ok { color: var(--eucalyptus); }
+.readiness-check.warn { color: var(--amber-deep, #9a5b13); }
+.live-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.2rem 0 0.8rem;
+}
+.live-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--eucalyptus);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--eucalyptus) 18%, transparent);
+}
+
+.live-version {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  color: var(--muted);
+}
+.live-note { font-size: 0.74rem; color: var(--muted); }
+.changed-card {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--eucalyptus);
+  background: color-mix(in srgb, var(--eucalyptus) 7%, var(--paper));
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  margin: 0 0 0.9rem;
+  box-shadow: var(--shadow-soft);
+}
+.changed-title { font-weight: 700; color: var(--ink); }
+.changed-card ul { margin: 0.4rem 0; padding-left: 1.1rem; color: var(--ink-soft); }
+.changed-card li { margin: 0.18rem 0; font-size: 0.86rem; }
+.changed-card p { margin: 0; font-size: 0.74rem; color: var(--muted); }

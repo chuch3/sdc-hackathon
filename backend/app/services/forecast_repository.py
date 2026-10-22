@@ -185,7 +185,7 @@ class SQLAlchemyForecastRepository:
 
     def overrides(self):
         contracts = self.contracts
-        return tuple(
+        holidays = tuple(
             contracts.CalendarOverride(
                 business_date=row.holiday_date,
                 multiplier=float(row.demand_multiplier),
@@ -196,6 +196,18 @@ class SQLAlchemyForecastRepository:
                 select(models.HolidayCalendar).order_by(models.HolidayCalendar.holiday_date)
             )
         )
+        markets = tuple(
+            contracts.CalendarOverride(
+                business_date=row.market_date,
+                multiplier=float(row.demand_multiplier),
+                product_sku=None,
+                kind="market_day",
+            )
+            for row in self.db.scalars(
+                select(models.MarketDay).order_by(models.MarketDay.market_date)
+            )
+        )
+        return holidays + markets
 
 
 def _utc_start(day: date, settings: Settings):

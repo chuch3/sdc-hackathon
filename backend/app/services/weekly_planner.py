@@ -1105,6 +1105,15 @@ def build_week(
             day_cards[day].append(_receive_order_card(lines))
 
     days_out: list[schemas.PlannerDay] = []
+    markets_by_date = {
+        row.market_date: row
+        for row in db.scalars(
+            select(models.MarketDay).where(
+                models.MarketDay.market_date >= board_start,
+                models.MarketDay.market_date <= board_end,
+            )
+        )
+    }
     uncovered_by_day: dict[date, Decimal] = {}
     for day in projection_days:
         if day < board_start:
@@ -1173,6 +1182,15 @@ def build_week(
                     unmet_demand=unmet,
                     ending_stock=ending,
                     expired_quantity=sum((row.expired_quantity for row in states), ZERO),
+                ),
+                market_day=(
+                    schemas.PlannerMarketDay(
+                        label=markets_by_date[day].label,
+                        demand_multiplier=markets_by_date[day].demand_multiplier,
+                        note=markets_by_date[day].note,
+                    )
+                    if day in markets_by_date
+                    else None
                 ),
             )
         )

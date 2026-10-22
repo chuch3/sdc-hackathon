@@ -1,0 +1,7 @@
+date,sku,quantity,daypart,stockout
+2026-10-20,MILK-001,12,morning,false
+2026-10-20,BREAD-001,18,morning,false
+2026-10-20,APPLE-001,6,midday,false
+2026-10-21,MILK-001,12,morning,false
+2026-10-21,BREAD-001,17,morning,false
+2026-10-21,APPLE-001,5,midday,true

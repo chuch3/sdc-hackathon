@@ -14,7 +14,7 @@ from .contracts import (
     SalesObservation,
 )
 from .forecasting import Forecaster
-from .metrics import backtest_forecaster, evaluate_metrics
+from .metrics import backtest_forecaster, backtest_observations, evaluate_metrics
 from .pipeline import ForecastPipeline
 from .reorder import ReorderService
 from .repository import InMemoryRepository
@@ -39,6 +39,7 @@ __all__ = [
     "ReorderService",
     "SalesObservation",
     "backtest_forecaster",
+    "backtest_observations",
     "evaluate_metrics",
     "generate_synthetic_dataset",
 ]

@@ -1021,6 +1021,48 @@
         }
       }
     },
+    "/api/v1/purchase-orders/{order_id}/supplier-email-draft": {
+      "get": {
+        "tags": [
+          "Purchasing"
+        ],
+        "summary": "Supplier Email Draft",
+        "operationId": "supplier_email_draft_api_v1_purchase_orders__order_id__supplier_email_draft_get",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierEmailDraft"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/purchase-orders/{order_id}": {
       "get": {
         "tags": [
@@ -1569,6 +1611,109 @@
         }
       }
     },
+    "/api/v1/onboarding/readiness": {
+      "get": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Onboarding Readiness",
+        "operationId": "onboarding_readiness_api_v1_onboarding_readiness_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingReadiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/sales/preview": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Preview Sales Import",
+        "operationId": "preview_sales_import_api_v1_imports_sales_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesImportPreviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesImportPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/sales/commit": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Commit Sales Import",
+        "operationId": "commit_sales_import_api_v1_imports_sales_commit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesImportCommitInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesImportCommit"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations/orbyte": {
       "get": {
         "tags": [
@@ -1576,6 +1721,221 @@
         ],
         "summary": "Orbyte Status",
         "operationId": "orbyte_status_api_v1_integrations_orbyte_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market-days": {
+      "get": {
+        "tags": [
+          "Planner"
+        ],
+        "summary": "List Market Days",
+        "operationId": "list_market_days_api_v1_market_days_get",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MarketDayOutput"
+                  },
+                  "title": "Response List Market Days Api V1 Market Days Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Planner"
+        ],
+        "summary": "Create Market Day",
+        "operationId": "create_market_day_api_v1_market_days_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketDayInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketDayOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market-days/{market_day_id}": {
+      "put": {
+        "tags": [
+          "Planner"
+        ],
+        "summary": "Update Market Day",
+        "operationId": "update_market_day_api_v1_market_days__market_day_id__put",
+        "parameters": [
+          {
+            "name": "market_day_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Market Day Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketDayInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketDayOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Planner"
+        ],
+        "summary": "Delete Market Day",
+        "operationId": "delete_market_day_api_v1_market_days__market_day_id__delete",
+        "parameters": [
+          {
+            "name": "market_day_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Market Day Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/pos": {
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Pos Webhook",
+        "description": "Ingest one provider-neutral POS event without giving the POS database access.",
+        "operationId": "pos_webhook_api_v1_webhooks_pos_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1950,6 +2310,26 @@
         }
       }
     },
+    "/api/v1/daily-sheet": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Daily Sheet",
+        "description": "A compact read-only payload for the floor/bakery print handoff.",
+        "operationId": "daily_sheet_api_v1_daily_sheet_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/holidays": {
       "get": {
         "tags": [
@@ -2031,6 +2411,49 @@
               "maximum": 365,
               "minimum": 1,
               "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/proof": {
+      "get": {
+        "tags": [
+          "Impact"
+        ],
+        "summary": "Proof Of Impact",
+        "operationId": "proof_of_impact_api_v1_analytics_proof_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 7,
+              "default": 14,
               "title": "Days"
             }
           }
@@ -2936,6 +3359,85 @@
         ],
         "title": "InventoryPositionOutput"
       },
+      "MarketDayInput": {
+        "properties": {
+          "market_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Market Date"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "demand_multiplier": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Demand Multiplier"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "market_date",
+          "label",
+          "demand_multiplier"
+        ],
+        "title": "MarketDayInput"
+      },
+      "MarketDayOutput": {
+        "properties": {
+          "market_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Market Date"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "demand_multiplier": {
+            "type": "string",
+            "title": "Demand Multiplier"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Note",
+            "default": ""
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "market_date",
+          "label",
+          "demand_multiplier",
+          "id"
+        ],
+        "title": "MarketDayOutput"
+      },
       "MovementOutput": {
         "properties": {
           "id": {
@@ -3052,6 +3554,93 @@
           "overdue_quantity"
         ],
         "title": "OnOrderOutput"
+      },
+      "OnboardingReadiness": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "no_products",
+              "no_sales",
+              "thin_history",
+              "ready",
+              "live"
+            ],
+            "title": "Stage"
+          },
+          "products_active": {
+            "type": "integer",
+            "title": "Products Active"
+          },
+          "products_ready": {
+            "type": "integer",
+            "title": "Products Ready"
+          },
+          "valid_days": {
+            "type": "integer",
+            "title": "Valid Days"
+          },
+          "required_days": {
+            "type": "integer",
+            "title": "Required Days"
+          },
+          "censored_days": {
+            "type": "integer",
+            "title": "Censored Days"
+          },
+          "last_sale_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sale Date"
+          },
+          "last_import_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Import At"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/ReadinessAction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of",
+          "stage",
+          "products_active",
+          "products_ready",
+          "valid_days",
+          "required_days",
+          "censored_days",
+          "next_action"
+        ],
+        "title": "OnboardingReadiness"
       },
       "PlannerBadge": {
         "properties": {
@@ -3242,6 +3831,16 @@
           },
           "projection": {
             "$ref": "#/components/schemas/PlannerProjection"
+          },
+          "market_day": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlannerMarketDay"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3278,6 +3877,30 @@
         "additionalProperties": false,
         "type": "object",
         "title": "PlannerDayKpis"
+      },
+      "PlannerMarketDay": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "demand_multiplier": {
+            "type": "string",
+            "title": "Demand Multiplier"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "demand_multiplier"
+        ],
+        "title": "PlannerMarketDay"
       },
       "PlannerOrderDue": {
         "properties": {
@@ -4149,6 +4772,59 @@
         ],
         "title": "PurchaseReceiptOutput"
       },
+      "ReadinessAction": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "page": {
+            "type": "string",
+            "title": "Page"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "page",
+          "reason"
+        ],
+        "title": "ReadinessAction"
+      },
+      "ReadinessCheck": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "ok",
+          "detail"
+        ],
+        "title": "ReadinessCheck"
+      },
       "Recommendation": {
         "properties": {
           "product_id": {
@@ -4427,6 +5103,11 @@
             "type": "string",
             "title": "Engine"
           },
+          "data_version": {
+            "type": "integer",
+            "title": "Data Version",
+            "default": 0
+          },
           "recommendations": {
             "items": {
               "$ref": "#/components/schemas/Recommendation"
@@ -4443,6 +5124,380 @@
           "recommendations"
         ],
         "title": "RecommendationList"
+      },
+      "SalesColumnMapping": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "daypart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daypart"
+          },
+          "stockout": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stockout"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SalesColumnMapping"
+      },
+      "SalesImportCommit": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/SalesColumnMapping"
+          },
+          "total_rows": {
+            "type": "integer",
+            "title": "Total Rows"
+          },
+          "valid_rows": {
+            "type": "integer",
+            "title": "Valid Rows"
+          },
+          "invalid_rows": {
+            "type": "integer",
+            "title": "Invalid Rows"
+          },
+          "duplicate_rows": {
+            "type": "integer",
+            "title": "Duplicate Rows"
+          },
+          "unknown_skus": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknown Skus"
+          },
+          "stockout_rows": {
+            "type": "integer",
+            "title": "Stockout Rows"
+          },
+          "date_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Start"
+          },
+          "date_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date End"
+          },
+          "valid_days": {
+            "type": "integer",
+            "title": "Valid Days"
+          },
+          "can_commit": {
+            "type": "boolean",
+            "title": "Can Commit"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/SalesImportIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "imported_rows": {
+            "type": "integer",
+            "title": "Imported Rows"
+          },
+          "batches_created": {
+            "type": "integer",
+            "title": "Batches Created"
+          },
+          "movements_created": {
+            "type": "integer",
+            "title": "Movements Created"
+          },
+          "stockout_events_created": {
+            "type": "integer",
+            "title": "Stockout Events Created"
+          },
+          "imported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Imported At"
+          },
+          "data_version": {
+            "type": "integer",
+            "title": "Data Version"
+          },
+          "replayed": {
+            "type": "boolean",
+            "title": "Replayed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "mapping",
+          "total_rows",
+          "valid_rows",
+          "invalid_rows",
+          "duplicate_rows",
+          "stockout_rows",
+          "valid_days",
+          "can_commit",
+          "request_id",
+          "imported_rows",
+          "batches_created",
+          "movements_created",
+          "stockout_events_created",
+          "imported_at",
+          "data_version"
+        ],
+        "title": "SalesImportCommit"
+      },
+      "SalesImportCommitInput": {
+        "properties": {
+          "csv_text": {
+            "type": "string",
+            "maxLength": 5000000,
+            "minLength": 1,
+            "title": "Csv Text"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/SalesColumnMapping"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "csv_text",
+          "request_id"
+        ],
+        "title": "SalesImportCommitInput"
+      },
+      "SalesImportIssue": {
+        "properties": {
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "row",
+          "field",
+          "message"
+        ],
+        "title": "SalesImportIssue"
+      },
+      "SalesImportPreview": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/SalesColumnMapping"
+          },
+          "total_rows": {
+            "type": "integer",
+            "title": "Total Rows"
+          },
+          "valid_rows": {
+            "type": "integer",
+            "title": "Valid Rows"
+          },
+          "invalid_rows": {
+            "type": "integer",
+            "title": "Invalid Rows"
+          },
+          "duplicate_rows": {
+            "type": "integer",
+            "title": "Duplicate Rows"
+          },
+          "unknown_skus": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknown Skus"
+          },
+          "stockout_rows": {
+            "type": "integer",
+            "title": "Stockout Rows"
+          },
+          "date_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Start"
+          },
+          "date_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date End"
+          },
+          "valid_days": {
+            "type": "integer",
+            "title": "Valid Days"
+          },
+          "can_commit": {
+            "type": "boolean",
+            "title": "Can Commit"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/SalesImportIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "mapping",
+          "total_rows",
+          "valid_rows",
+          "invalid_rows",
+          "duplicate_rows",
+          "stockout_rows",
+          "valid_days",
+          "can_commit"
+        ],
+        "title": "SalesImportPreview"
+      },
+      "SalesImportPreviewInput": {
+        "properties": {
+          "csv_text": {
+            "type": "string",
+            "maxLength": 5000000,
+            "minLength": 1,
+            "title": "Csv Text"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/SalesColumnMapping"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "csv_text"
+        ],
+        "title": "SalesImportPreviewInput"
       },
       "SeasonalAdvice": {
         "properties": {
@@ -4727,6 +5782,52 @@
         ],
         "title": "StockAllocation"
       },
+      "SupplierEmailDraft": {
+        "properties": {
+          "purchase_order_id": {
+            "type": "integer",
+            "title": "Purchase Order Id"
+          },
+          "recipient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "mailto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mailto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "purchase_order_id",
+          "subject",
+          "body"
+        ],
+        "title": "SupplierEmailDraft"
+      },
       "SupplierInput": {
         "properties": {
           "name": {
@@ -4734,6 +5835,18 @@
             "maxLength": 150,
             "minLength": 1,
             "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 254
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
           },
           "lead_time_days": {
             "type": "integer",
@@ -4783,6 +5896,18 @@
             "maxLength": 150,
             "minLength": 1,
             "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 254
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
           },
           "lead_time_days": {
             "type": "integer",

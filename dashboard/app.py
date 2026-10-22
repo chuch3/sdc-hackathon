@@ -16,6 +16,7 @@ from dashboard.ascii_magic import ASCII_MAGIC_HTML
 from dashboard.components import page_header, pill
 from dashboard.views import (
     bakery,
+    daily_sheet,
     expiry,
     impact,
     inventory,
@@ -61,31 +62,18 @@ if "actor_role" not in st.session_state:
 if "reason" not in st.session_state:
     st.session_state.reason = params.get("reason", "Dashboard decision")
 
-NAV_ITEMS = [
-    "Today",
-    "Week",
-    "Inventory",
-    "Expiry",
-    "Recommendations",
-    "Purchasing",
-    "Bakery",
-    "Impact",
-    "Settings",
-]
+NAV_ITEMS = ["Today", "Week", "Inventory", "Impact", "Settings"]
 NAV_LABELS = {
     "Today": "Today",
-    "Week": "Week board",
-    "Inventory": "Inventory",
-    "Expiry": "Expiry",
-    "Recommendations": "Actions",
-    "Purchasing": "Purchasing",
-    "Bakery": "Bakery",
-    "Impact": "Impact",
+    "Week": "Week",
+    "Inventory": "Stock",
+    "Impact": "Insights",
     "Settings": "Settings",
 }
+ALL_PAGES = [*NAV_ITEMS, "Expiry", "Recommendations", "Purchasing", "Bakery", "Daily sheet"]
 if "page" not in st.session_state:
     requested = params.get("page")
-    st.session_state.page = requested if requested in NAV_ITEMS else "Today"
+    st.session_state.page = requested if requested in ALL_PAGES else "Today"
 
 with st.container(key="top-bar"):
     bar_left, bar_right = st.columns([5.2, 4.8], vertical_alignment="center", wrap=True)
@@ -179,7 +167,26 @@ with st.container(horizontal=True, key="top-nav", gap="small", vertical_alignmen
     ):
         st.session_state.fs_dark = not st.session_state.fs_dark
         st.rerun()
+    if st.button("Daily sheet", key="nav-daily-sheet", icon=":material/print:", type="secondary"):
+        st.session_state.page = "Daily sheet"
+        st.rerun()
 page = st.session_state.page
+
+st.html(
+    """<script>
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        const button = [...parent.document.querySelectorAll('button')].find((item) => item.innerText.includes('Today'));
+        if (button) button.focus();
+      }
+      if (event.key === '?' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+        event.preventDefault(); alert('Keyboard: Tab/Shift+Tab move, Enter activates, Escape closes dialogs. Ctrl/Cmd+K returns focus to navigation.');
+      }
+    });
+    </script>""",
+    unsafe_allow_javascript=True,
+)
 
 actor = {
     "actor_name": st.session_state.actor_name,
@@ -225,6 +232,7 @@ PAGE_COPY = {
         "API connection, role simulation, and integration status.",
         "gear",
     ),
+    "Daily sheet": ("Daily sheet", "A compact, printable handoff for the floor and bakery.", "receipt"),
 }
 title, subtitle, page_icon = PAGE_COPY[page]
 page_header(title, subtitle, st.session_state.business_date, actor, page_icon)
@@ -245,5 +253,7 @@ elif page == "Bakery":
     bakery.render(client, actor)
 elif page == "Impact":
     impact.render(client, actor)
+elif page == "Daily sheet":
+    daily_sheet.render(client, actor)
 else:
     settings.render(client, actor)

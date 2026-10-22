@@ -91,15 +91,26 @@ def evaluate_metrics(
     }
 
 
-def backtest_forecaster(
+@dataclass(frozen=True)
+class BacktestObservation:
+    product_sku: str
+    business_date: date
+    actual: float
+    forecast: float
+    lower: float
+    upper: float
+
+
+def backtest_observations(
     forecaster: Forecaster,
     context: ForecastContext,
     as_of: date,
     horizon_days: int,
     product_skus: Iterable[str] | None = None,
-) -> dict[str, dict[str, MetricResult]]:
+) -> list[BacktestObservation]:
+    """Per-day actual and forecast rows, excluding stockout-censored days."""
     skus = list(product_skus or sorted(context.products))
-    results: dict[str, dict[str, MetricResult]] = {}
+    observations: list[BacktestObservation] = []
     for sku in skus:
         if sku not in context.products:
             continue
@@ -122,12 +133,39 @@ def backtest_forecaster(
                 actual_by_date[observation.business_date] += observation.quantity
                 if observation.is_stockout_censored:
                     censored_dates.add(observation.business_date)
-        actual: list[float] = []
-        forecast: list[float] = []
         for item in result.daily:
             if item.forecast_date in censored_dates:
                 continue
-            actual.append(actual_by_date.get(item.forecast_date, 0.0))
-            forecast.append(item.quantity)
-        results[sku] = evaluate_metrics(actual, forecast)
+            observations.append(
+                BacktestObservation(
+                    product_sku=sku,
+                    business_date=item.forecast_date,
+                    actual=actual_by_date.get(item.forecast_date, 0.0),
+                    forecast=item.quantity,
+                    lower=item.lower,
+                    upper=item.upper,
+                )
+            )
+    return observations
+
+
+def backtest_forecaster(
+    forecaster: Forecaster,
+    context: ForecastContext,
+    as_of: date,
+    horizon_days: int,
+    product_skus: Iterable[str] | None = None,
+) -> dict[str, dict[str, MetricResult]]:
+    observations = backtest_observations(
+        forecaster, context, as_of, horizon_days, product_skus
+    )
+    grouped: dict[str, list[BacktestObservation]] = defaultdict(list)
+    for observation in observations:
+        grouped[observation.product_sku].append(observation)
+    results: dict[str, dict[str, MetricResult]] = {}
+    for sku, rows in grouped.items():
+        results[sku] = evaluate_metrics(
+            [row.actual for row in rows],
+            [row.forecast for row in rows],
+        )
     return results

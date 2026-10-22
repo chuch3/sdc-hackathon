@@ -16,6 +16,7 @@ class Supplier(Base):
     )
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(150))
+    email: Mapped[str | None] = mapped_column(String(254))
     lead_time_days: Mapped[int] = mapped_column(default=2)
     moq: Mapped[Decimal] = mapped_column(Numeric(14, 3), default=Decimal("1"))
     reliability: Mapped[Decimal] = mapped_column(Numeric(4, 3), default=Decimal("0.95"))
@@ -226,6 +227,30 @@ class HolidayCalendar(Base):
     holiday_date: Mapped[date] = mapped_column(Date, unique=True)
     label: Mapped[str] = mapped_column(String(100))
     demand_multiplier: Mapped[Decimal] = mapped_column(Numeric(8, 3))
+
+
+class MarketDay(Base):
+    """A locally configured trading event that lifts demand for one business day."""
+
+    __tablename__ = "market_days"
+    __table_args__ = (Index("uq_market_day_date", "market_date", unique=True),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    market_date: Mapped[date] = mapped_column(Date)
+    label: Mapped[str] = mapped_column(String(100))
+    demand_multiplier: Mapped[Decimal] = mapped_column(Numeric(8, 3))
+    note: Mapped[str] = mapped_column(String(300), default="")
+
+
+class PosWebhookEvent(Base):
+    """Idempotency and audit record for externally submitted POS events."""
+
+    __tablename__ = "pos_webhook_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(100), unique=True)
+    event_type: Mapped[str] = mapped_column(String(20))
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
 
 
 class Setting(Base):

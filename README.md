@@ -318,7 +318,7 @@ Daily rhythm: 15-minute standup, merge by 16:30, checkpoint demo at 16:45. The g
 - **Hosting:** The app is deployed with Replit Deployments at the Live Demo link above.
 - **Secrets:** API keys (`RUNPOD_API_KEY`, `RUNPOD_ENDPOINT_ID`) are stored in Replit Secrets, never in the code.
 
-📄 Proof of use: [`submission/SDC2026_TeamName_Replit_POU.pdf`](submission/SDC2026_TeamName_Replit_POU.pdf)
+📄 Proof of use: [`submission/SDC2026_Monke_Replit_POU.pdf`](submission/SDC2026_Monke_Replit_POU.pdf)
 
 ## How We Use RunPod *(Required)*
 
@@ -384,7 +384,7 @@ The endpoint returns `q10`/`q50`/`q90` per day, a total interval, confidence, re
 
 | Name        | Role                | GitHub                                   |
 | ----------- | ------------------- | ---------------------------------------- |
-| Sean Abraham Summertan | Team Lead  | None |
+| Sean Abraham Summertan | Team Lead  | [@Deranged](https://github.com/dsc2409091 |
 | Nicholas Marcel Tanjaya | Backend & Data  | [@nicho-mt](https://github.com/nicho-mt) |
 | Deven Por Tirtanadi | Forecast / Inventory | None |
 | Vincent William Wijaya | Bakery Domain       | [@chuch3](https://github.com/chuch3) |

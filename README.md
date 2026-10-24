@@ -1,4 +1,18 @@
-# Buns at Work! — Perishable Food Inventory AI Recommender System
+<div align="center">
+
+# 🥖 Buns at Work!  🍞
+
+Perishable Food Inventory AI Recommender System
+
+**Reduce waste. Forecast demand. Meet the UN SDGs.**
+
+[![SDG](https://img.shields.io/badge/SDG-2%20%7C%2012%20%7C%2013-blue)](https://sdgs.un.org/goals)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
+
+</div>
+
 
 > A data-trust decision loop for small food shops and bakeries that refuses to guess when history is missing, imports messy sales CSVs safely, and separates forecast accuracy from causal impact claims with a person approving every money or customer-affecting action.
 

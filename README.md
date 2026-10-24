@@ -132,15 +132,15 @@ User ──► Replit (Streamlit dashboard + FastAPI) ──► RunPod Endpoint 
 
 ## How to Run
 
-### Option 1 — Run on Replit (Recommended)
+### Option 1 — Run on Replit / Rend er (Recommended)
 
-1. Open the [Replit Project](https://replit.com/@your-username/freshstock), or import this repository via **Create Repl → Import from GitHub**.
-2. Open the **Secrets** tab (🔒) and add the variables listed in `.env.example`:
-   - `RUNPOD_API_KEY`
-   - `RUNPOD_ENDPOINT_ID`
-   - `DOMAIN` (set to `bakery` or `generic`)
-3. Click **Run**. Replit uses the `.replit` file to start the API and the Streamlit dashboard.
-4. The API seeds the fictional shop automatically on first boot — 8 suppliers, 16 products, 42 days of sales history, live batches across every expiry bucket, and purchase orders in each workflow state.
+Open the [Replit Project](
+https://sdc-hackathon--polychch3.replit.app
+), or [Render Project](https://sdc-dashboard.onrender.com/)
+
+
+> [!WARNING]
+> If error occurs, keep on refreshing as the /heath endpoint may be hanging (e.g., waiting on a slow database or delay from loading deployment service), the connection might appear refused or fail during the health check window. :)
 
 ### Option 2 — Run Locally
 

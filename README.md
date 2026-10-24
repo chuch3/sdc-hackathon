@@ -41,6 +41,7 @@ Perishable Food Inventory AI Recommender System
 | ----------------- | ---------------------------------------------- |
 | GitHub Repository | https://github.com/chuch3/sdc-hackathon    |
 | Replit Project    | https://replit.com/@polychch3/sdc-hackathon |
+| Render Project (If Replit fails)    | https://sdc-dashboard.onrender.com/ together with https://sdc-api-dqfi.onrender.com/docs#/|
 | Live Demo | https://sdc-hackathon--polychch3.replit.app   |
 | RunPod Endpoint   | https://api.runpod.ai/v2/us4ix85hcjrsyz      |
 | Slide Deck        | https://canva.link/nspnlsmm6qwdsz3                     |

@@ -108,7 +108,7 @@ with st.container(key="top-bar"):
         client = ApiClient(base)
 
         try:
-            health = client.health()
+            health = client.health(retries=8, delay=1.0)
             st.session_state.business_date = health["business_date"]
             with status_col:
                 st.markdown(

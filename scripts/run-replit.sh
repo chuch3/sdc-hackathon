@@ -18,10 +18,13 @@ export AUTO_SEED_DEMO="${AUTO_SEED_DEMO:-true}"
 export API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:$API_PORT/api/v1}"
 
 API_PID=""
+DASHBOARD_PID=""
 cleanup() {
-    if [[ -n "$API_PID" ]]; then
-        kill "$API_PID" 2>/dev/null || true
-    fi
+    for pid in "$DASHBOARD_PID" "$API_PID"; do
+        if [[ -n "$pid" ]]; then
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
 }
 trap cleanup EXIT INT TERM
 
@@ -31,20 +34,10 @@ trap cleanup EXIT INT TERM
 ) &
 API_PID=$!
 
-API_HEALTHY=0
-for _ in $(seq 1 60); do
-    if python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:$API_PORT/health', timeout=1)" 2>/dev/null; then
-        API_HEALTHY=1
-        break
-    fi
-    sleep 1
-done
-if [[ "$API_HEALTHY" -ne 1 ]]; then
-    echo "FreshStock API did not become healthy on port $API_PORT." >&2
-    exit 1
-fi
-
 streamlit run "$ROOT/src/dashboard/app.py" \
     --server.address=0.0.0.0 \
     --server.port="$DASHBOARD_PORT" \
-    --server.headless=true
+    --server.headless=true &
+DASHBOARD_PID=$!
+
+wait "$DASHBOARD_PID"

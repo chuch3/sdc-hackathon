@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -64,14 +65,19 @@ class ApiClient:
     def patch(self, path: str, payload: dict | None = None):
         return self._request("PATCH", path, json=payload or {})
 
-    def health(self):
+    def health(self, retries: int = 1, delay: float = 1.0):
         root = self.base_url.rsplit("/api/", 1)[0]
-        try:
-            response = self.session.get(f"{root}/health", timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as exc:
-            raise ApiError(0, f"API unavailable at {root}: {exc}") from exc
+        last_error = None
+        for attempt in range(max(1, retries)):
+            try:
+                response = self.session.get(f"{root}/health", timeout=self.timeout)
+                response.raise_for_status()
+                return response.json()
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt + 1 < retries:
+                    time.sleep(delay)
+        raise ApiError(0, f"API unavailable at {root}: {last_error}") from last_error
 
     def products(self):
         return self.get("products", {"limit": 200})

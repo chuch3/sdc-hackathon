@@ -38,4 +38,4 @@ services:
       # Public URL of the API service above. If you rename sdc-api, update this
       # value to https://<new-service-name>.onrender.com/api/v1.
       - key: API_BASE_URL
-        value: https://sdc-api.onrender.com/api/v1
+        value: https://sdc-api-dqfi.onrender.com/api/v1

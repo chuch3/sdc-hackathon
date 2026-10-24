@@ -82,35 +82,28 @@ Buns at Work! is a thin decision layer that fits the SME's existing routine with
 
 ```
 .
-├── docs/                    # Screenshots, diagrams, USER_GUIDE, DATA_IMPORT, AB_TEST_PLAN, DEMO_SCRIPT
-├── runpod/
-│   └── handler.py           # RunPod serverless handler (optional ML challenger inference)
+├── docs/
 ├── src/
-│   ├── api/                 # FastAPI routes
-│   ├── core/                # config, settings
-│   ├── db/                  # session, migrations
-│   ├── models/              # SQLAlchemy tables
-│   ├── schemas/             # Pydantic request/response models
-│   ├── services/            # inventory, expiry, forecasting, reorder, waste
-│   ├── domains/             # base policy + generic + bakery
-│   ├── analytics/           # SDG metrics
-│   └── main.py              # Application entry point
-├── dashboard/               # Streamlit pages
-├── scripts/                 # seed, expiry scan, forecast refresh
-├── forecast/                # baseline + optional ML forecaster, offline alias registry
-│   └── ml/                  # ML training, MLflow, model card
+│   ├── api/
+│   ├── core/
+│   ├── db/
+│   ├── models/
+│   ├── schemas/
+│   ├── services/
+│   ├── domains/
+│   ├── analytics/
+│   └── main.py
+├── dashboard/               # (or src/dashboard/, per README)
+├── scripts/
+├── forecast/
+│   └── ml/
 ├── tests/
-│   └── test_*.py            # Unit and E2E tests
-├── submission/              # Required submission documents
-│   ├── SDC2026_TeamName_Preliminary.pdf
-│   ├── SDC2026_TeamName_TechDeclaration.pdf
-│   ├── SDC2026_TeamName_Replit_POU.pdf
-│   └── SDC2026_TeamName_Runpod_POU.pdf
-├── .env.example             # Example environment variables
+├── submission/
+├── .env.example
 ├── .gitignore
-├── .replit                  # Replit run configuration
-├── LICENSE
-├── requirements.txt         # Python dependencies
+├── .replit
+├── LICENSE                  # Apache 2.0
+├── requirements.txt
 └── README.md
 ```
 

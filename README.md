@@ -40,11 +40,11 @@ Perishable Food Inventory AI Recommender System
 | Resource          | Link                                           |
 | ----------------- | ---------------------------------------------- |
 | GitHub Repository | https://github.com/chuch3/sdc-hackathon    |
-| Replit Project    | https://sdc-hackathon--polychch3.replit.app   |
-| Render Deployment | https://sdc-dashboard.onrender.com/            |
+| Replit Project    | https://replit.com/@polychch3/sdc-hackathon |
+| Live Demo | https://sdc-hackathon--polychch3.replit.app   |
 | RunPod Endpoint   | https://api.runpod.ai/v2/us4ix85hcjrsyz      |
-| Slide Deck        | https://example.com/slides                     |
-| Demo Video        | https://example.com/demo-video                 |
+| Slide Deck        | https://canva.link/nspnlsmm6qwdsz3                     |
+| Demo Video        | https://youtu.be/tqesys6fRl0?si=_dTNBV0G-71PeQvm                 |
 
 ---
 
@@ -140,7 +140,9 @@ https://sdc-hackathon--polychch3.replit.app
 
 
 > [!WARNING]
-> If error occurs, keep on refreshing as the /heath endpoint may be hanging (e.g., waiting on a slow database or delay from loading deployment service), the connection might appear refused or fail during the health check window. :)
+> The /api endpoint must be online in order to start the dashboard. 
+In production, the database API must be actively online to handle requests
+from the dashboard from multiple users. [API](https://sdc-api-dqfi.onrender.com/docs#/)
 
 ### Option 2 — Run Locally
 

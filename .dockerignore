@@ -1,0 +1,15 @@
+.git
+.venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+data
+src/backend/data
+src/forecast/artifacts/mlruns
+src/forecast/artifacts/mlflow.db
+src/forecast/artifacts/registry
+**/*.pt
+**/*.pth
+!src/forecast/artifacts/model.pt

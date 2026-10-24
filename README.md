@@ -16,6 +16,8 @@ Perishable Food Inventory AI Recommender System
 
 > A data-trust decision loop for small food shops and bakeries that refuses to guess when history is missing, imports messy sales CSVs safely, and separates forecast accuracy from causal impact claims with a person approving every money or customer-affecting action.
 
+<img src="docs/image.png" alt="Dashboard" width="600">
+
 ---
 
 ## Team Information
@@ -315,7 +317,7 @@ Daily rhythm: 15-minute standup, merge by 16:30, checkpoint demo at 16:45. The g
 ## How We Use RunPod *(Required)*
 
 - **Workload:** The optional ML forecaster (q10/q50/q90 demand prediction with a global model and product/category embeddings) runs inference on a RunPod GPU. The rule-based baseline runs on Replit as the default.
-- **Setup:** `runpod/handler.py` is deployed as a **RunPod Serverless Endpoint**.
+- **Setup:** `runpod/handler.py` is deployed as a **RunPod Serverless Endpoint**. Build it with `docker build -f runpod/Dockerfile -t <dockerhub-user>/freshstock-runpod:latest .`, push the image, then create a Serverless endpoint with `MODEL_PATH=/app/src/forecast/artifacts/model.pt` and `DEVICE=auto`.
 - **Integration:** The Replit app sends requests to the endpoint using `RUNPOD_API_KEY` and `RUNPOD_ENDPOINT_ID`. If the endpoint is unavailable or the product is unseen/stale/low-coverage, the system falls back to the baseline forecaster.
 
 Example request:
@@ -324,8 +326,26 @@ Example request:
 curl -X POST https://api.runpod.ai/v2/$RUNPOD_ENDPOINT_ID/runsync \
   -H "Authorization: Bearer $RUNPOD_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"input": {"product_id": "sourdough", "horizon_days": 1}}'
+  -d '{
+    "input": {
+      "product": {
+        "sku": "sourdough",
+        "name": "Sourdough",
+        "category": "bakery",
+        "domain": "bakery",
+        "unit": "loaf",
+        "shelf_life_days": 2,
+        "lead_time_days": 1,
+        "moq": 5,
+        "case_size": 5
+      },
+      "horizon_days": 2,
+      "sales_history": [28, 31, 27, 30, 29, 33, 35, 26, 28, 30, 32, 34, 36, 38]
+    }
+  }'
 ```
+
+The endpoint returns `q10`/`q50`/`q90` per day, a total interval, confidence, reason codes, and the baseline fallback flag. Send `{"input": {"action": "health"}}` to check that the model checkpoint loaded.
 
 📄 Proof of use: [`submission/SDC2026_TeamName_Runpod_POU.pdf`](submission/SDC2026_TeamName_Runpod_POU.pdf)
 

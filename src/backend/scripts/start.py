@@ -10,7 +10,8 @@ if __name__ == "__main__":
         seeded = subprocess.run([sys.executable, "-m", "scripts.seed"], check=False)
         if seeded.returncode:
             print("Demo seed skipped; the database already contains data.")
+    port = os.getenv("PORT", "8000")
     subprocess.run(
-        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"],
+        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", port],
         check=True,
     )

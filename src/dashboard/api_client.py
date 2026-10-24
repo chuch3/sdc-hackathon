@@ -2,8 +2,18 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
 import requests
+
+
+def _normalize_base_url(value: str) -> str:
+    value = value.strip().rstrip("/")
+    if not value.startswith(("http://", "https://")):
+        value = f"https://{value}"
+    if not urlsplit(value).path:
+        value = f"{value}/api/v1"
+    return value
 
 
 class ApiError(RuntimeError):
@@ -15,7 +25,8 @@ class ApiError(RuntimeError):
 
 class ApiClient:
     def __init__(self, base_url: str | None = None, timeout: float = 20.0) -> None:
-        self.base_url = (base_url or os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")).rstrip("/")
+        raw_url = base_url or os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
+        self.base_url = _normalize_base_url(raw_url)
         self.timeout = timeout
         self.session = requests.Session()
 

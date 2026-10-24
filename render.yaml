@@ -1,15 +1,27 @@
+# Render Blueprint for the free-tier demo.
+#
+# The API and dashboard are separate Docker web services. Render's free plan has
+# no persistent disk, so the SQLite database is rebuilt from the demo seed after
+# every deploy or cold restart. This is intentional for the hackathon demo.
 services:
   - type: web
     name: sdc-api
     runtime: docker
     plan: free
+    region: singapore
+    branch: main
+    dockerContext: ./src
     dockerfilePath: ./src/backend/Dockerfile
-    dockerContext: .
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        value: sqlite:////app/data/inventory.db
+        value: sqlite:////app/backend/data/inventory.db
       - key: BUSINESS_TIMEZONE
         value: Asia/Kuala_Lumpur
+      - key: FORECAST_PACKAGE_ROOT
+        value: /app
+      - key: FORECAST_ENGINE
+        value: baseline
       - key: AUTO_SEED_DEMO
         value: "true"
 
@@ -17,8 +29,13 @@ services:
     name: sdc-dashboard
     runtime: docker
     plan: free
+    region: singapore
+    branch: main
+    dockerContext: ./src
     dockerfilePath: ./src/dashboard/Dockerfile
-    dockerContext: .
+    healthCheckPath: /_stcore/health
     envVars:
+      # Public URL of the API service above. If you rename sdc-api, update this
+      # value to https://<new-service-name>.onrender.com/api/v1.
       - key: API_BASE_URL
         value: https://sdc-api.onrender.com/api/v1

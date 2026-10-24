@@ -1,0 +1,15 @@
+run = "bash scripts/run-replit.sh"
+modules = ["python-3.11"]
+
+[deployment]
+build = ["python", "-m", "pip", "install", "-r", "requirements.txt"]
+run = ["bash", "scripts/run-replit.sh"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 8501
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000

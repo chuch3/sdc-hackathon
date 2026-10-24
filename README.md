@@ -10,6 +10,8 @@ Perishable Food Inventory AI Recommender System
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Render](https://img.shields.io/badge/Render-Live-46E3B7?logo=render&logoColor=white)](https://sdc-dashboard.onrender.com/)
+[![Replit](https://img.shields.io/badge/Replit-Live-F26207?logo=replit&logoColor=white)](https://sdc-hackathon--polychch3.replit.app)
 
 </div>
 
@@ -38,10 +40,9 @@ Perishable Food Inventory AI Recommender System
 | Resource          | Link                                           |
 | ----------------- | ---------------------------------------------- |
 | GitHub Repository | https://github.com/chuch3/sdc-hackathon    |
-| Replit Project    | https://replit.com/@your-username/freshstock   |
-| Live Demo         | https://freshstock.replit.app                  |
+| Replit Project    | https://sdc-hackathon--polychch3.replit.app   |
 | Render Deployment | https://sdc-dashboard.onrender.com/            |
-| RunPod Endpoint   | https://api.runpod.ai/v2/your-endpoint-id      |
+| RunPod Endpoint   | https://api.runpod.ai/v2/us4ix85hcjrsyz      |
 | Slide Deck        | https://example.com/slides                     |
 | Demo Video        | https://example.com/demo-video                 |
 

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: sdc-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////app/backend/data/inventory.db
+      - key: BUSINESS_TIMEZONE
+        value: Asia/Kuala_Lumpur
+      - key: FORECAST_PACKAGE_ROOT
+        value: /app
+      - key: AUTO_SEED_DEMO
+        value: "true"
+
+  - type: web
+    name: sdc-dashboard
+    runtime: docker
+    plan: free
+    dockerfilePath: ./dashboard/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: API_BASE_URL
+        value: https://sdc-api.onrender.com/api/v1

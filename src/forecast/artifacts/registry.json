@@ -1,0 +1,23 @@
+{
+  "aliases": {
+    "challenger": 1,
+    "champion": 1
+  },
+  "model_name": "demand_forecaster",
+  "versions": [
+    {
+      "checkpoint": "registry/demand_forecaster/v1/model.pt",
+      "created_at": "2026-10-20T05:34:07.261010+00:00",
+      "metrics": {
+        "MAE": 7.955009197484616,
+        "WAPE": 0.13261678750406425,
+        "bias": -0.6827824330423974,
+        "coverage": 0.8363027572631836,
+        "mean_actual": 59.98493363625493,
+        "n": 8363.0,
+        "pinball": 2.518209218978882
+      },
+      "version": 1
+    }
+  ]
+}

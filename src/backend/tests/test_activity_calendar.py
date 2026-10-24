@@ -111,23 +111,40 @@ def test_recommendations_report_the_latest_decision(catalog):
     assert item["decision"] == "REJECTED"
 
 
-def test_decision_is_kept_in_the_activity_log(catalog):
+def test_edited_decision_updates_quantity(catalog):
     client, app, _, product = catalog
+    edited_quantity = "3"
+    
     client.post(
         f"/api/v1/recommendations/{product['id']}/decision",
         json={
             "actor_name": "Demo Owner",
             "actor_role": "owner",
-            "reason": "Approved from the dashboard",
-            "decision": "APPROVED",
+            "reason": "Edited quantity from dashboard",
+            "decision": "EDITED",
             "action": "HOLD",
-            "quantity": "0",
+            "quantity": edited_quantity,
         },
     )
+    payload = client.get("/api/v1/recommendations").json()
+    item = next(row for row in payload["recommendations"] if row["product_id"] == product["id"])
+    assert item["decision"] == "EDITED"
+    assert item["quantity"] == edited_quantity
+    assert item["edited_quantity"] == edited_quantity
+    
     with app.state.session_factory() as db:
         events = db.scalars(
             select(models.ActivityEvent).where(
-                models.ActivityEvent.event_type == "RECOMMENDATION_APPROVED"
+                models.ActivityEvent.event_type == "RECOMMENDATION_EDITED"
+            )
+        ).all()
+        assert len(events) == 1
+        assert events[0].entity_id == product["id"]
+    
+    with app.state.session_factory() as db:
+        events = db.scalars(
+            select(models.ActivityEvent).where(
+                models.ActivityEvent.event_type == "RECOMMENDATION_EDITED"
             )
         ).all()
         assert len(events) == 1

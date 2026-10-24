@@ -27,6 +27,8 @@ from dashboard.views import (
     week,
 )
 
+st.set_option("client.toolbarMode", "minimal")
+
 st.set_page_config(
     page_title="Buns At Work!",
     page_icon=None,
@@ -76,43 +78,66 @@ if "page" not in st.session_state:
     st.session_state.page = requested if requested in ALL_PAGES else "Today"
 
 with st.container(key="top-bar"):
-    bar_left, bar_right = st.columns([5.2, 4.8], vertical_alignment="center", wrap=True)
+    bar_left, bar_right = st.columns([5.5, 4.5], vertical_alignment="center", wrap=True)
+
+    # ---------- LEFT: brand mark (icon) + name + note ----------
     with bar_left:
         st.markdown(
-            '<div class="topbar-note">Autumn bakehouse theme · human approval '
-            "required · estimated impact is labelled</div>",
+            f"""
+            <div class="topbar-brand brand-left">
+              <div class="brand-mark">{brand_mark()}</div>
+              <div>
+                <div class="brand-name">Buns At Work!</div>
+              </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
+    # ---------- RIGHT: status pills + Setup / API controls ----------
     with bar_right:
-        logo_col, status_col, controls_col = st.columns(
-            [1.9, 1.9, 1.3], vertical_alignment="center", gap="small"
+        # spacer_col pushes the controls to the far r2ght
+        status_col, spacer_col, controls_col = st.columns(
+            [10, 0.1, 2], vertical_alignment="center", gap="small"
         )
-        with logo_col:
-            st.markdown(
-                f"""
-                <div class="topbar-brand brand-right">
-                  <div class="brand-mark">{brand_mark()}</div>
-                  <div>
-                    <div class="brand-name">Buns At Work!</div>
-                    <div class="brand-sub">FreshStock Bakehouse</div>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+
+        base = st.session_state.get(
+            "api_base",
+            os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1"),
+        )
+        client = ApiClient(base)
+
+        try:
+            health = client.health()
+            st.session_state.business_date = health["business_date"]
+            with status_col:
+                st.markdown(
+                    f'<div class="topbar-status" style="text-align:right;">'
+                    f"{pill('API connected', 'green')} "
+                    f"{pill(health['business_date'], 'slate')}</div>",
+                    unsafe_allow_html=True,
+                )
+
+        except ApiError as exc:
+            with status_col:
+                st.error(exc.detail)
+            st.stop()
+
         with controls_col:
             with st.popover("Setup", icon=":material/tune:", width="content"):
-                base = st.text_input(
+                base_input = st.text_input(
                     "API endpoint",
                     value=st.session_state.get(
-                        "api_base", os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
+                        "api_base",
+                        os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1"),
                     ),
                 )
-                st.session_state.api_base = base
+                st.session_state.api_base = base_input
                 st.caption("Acting as")
                 st.session_state.actor_name = st.text_input(
-                    "Name", value=st.session_state.actor_name, label_visibility="collapsed"
+                    "Name",
+                    value=st.session_state.actor_name,
+                    label_visibility="collapsed",
                 )
                 roles = ["owner", "manager", "bookkeeper", "baker", "staff", "viewer"]
                 index = (
@@ -132,22 +157,9 @@ with st.container(key="top-bar"):
                     st.markdown(pill("Orbyte webview", "blue"), unsafe_allow_html=True)
                 st.caption("Every change is written to the shared ledger.")
 
-        client = ApiClient(base)
-        try:
-            health = client.health()
-            st.session_state.business_date = health["business_date"]
-            with status_col:
-                st.markdown(
-                    f'<div class="topbar-status">{pill("API connected", "green")} '
-                    f'{pill(health["business_date"], "slate")}</div>',
-                    unsafe_allow_html=True,
-                )
-        except ApiError as exc:
-            with status_col:
-                st.error(exc.detail)
-            st.stop()
-
-with st.container(horizontal=True, key="top-nav", gap="small", vertical_alignment="center", wrap=True):
+with st.container(
+    horizontal=True, key="top-nav", gap="small", vertical_alignment="center", wrap=True
+):
     for item in NAV_ITEMS:
         if st.button(
             NAV_LABELS[item],
@@ -232,7 +244,11 @@ PAGE_COPY = {
         "API connection, role simulation, and integration status.",
         "gear",
     ),
-    "Daily sheet": ("Daily sheet", "A compact, printable handoff for the floor and bakery.", "receipt"),
+    "Daily sheet": (
+        "Daily sheet",
+        "A compact, printable handoff for the floor and bakery.",
+        "receipt",
+    ),
 }
 title, subtitle, page_icon = PAGE_COPY[page]
 page_header(title, subtitle, st.session_state.business_date, actor, page_icon)

@@ -1,4 +1,4 @@
-"""ASCII Magic loader for the "Autumn Forest" background piece.
+"""ASCII Magic loader for the "Grand Canyon Rim" background piece.
 
 The piece is decoration only: the workspace panel on top of it stays opaque,
 so every heading, table and number is read on solid paper and the art is only
@@ -13,9 +13,9 @@ from __future__ import annotations
 
 ASCII_MAGIC_SRC = "https://www.ascii-magic.com/ascii/ascii.js"
 
-# The piece is 100 columns wide, so this cell size gives a 1083 x 777 frame
-# that is then scaled to cover the viewport.
-ASCII_ART_SIZE = 18
+# Grand Canyon Rim is 192 x 108 cells. At size=10 the blocks look stays
+# legible while the frame stays small enough to scale cleanly to a viewport.
+ASCII_ART_SIZE = 10
 
 ASCII_MAGIC_HTML = """
 <script>
@@ -25,9 +25,10 @@ ASCII_MAGIC_HTML = """
   const SCRIPT_ID = "fs-ascii-magic-script";
   const SRC = "https://www.ascii-magic.com/ascii/ascii.js";
   const CELL_WIDTH = 0.602;
-  const COLS = 100;
-  const ROWS = 36;
+  const COLS = 192;
+  const ROWS = 108;
   const LINE_HEIGHT = 1.2;
+  const SIZE = 10;
 
   if (!document.getElementById(SCRIPT_ID)) {
     const loader = document.createElement("script");
@@ -49,15 +50,15 @@ ASCII_MAGIC_HTML = """
   if (!art) {
     art = document.createElement("ascii-art");
     art.id = ART_ID;
-    art.setAttribute("piece", "autumn-forest");
-    art.setAttribute("look", "dots");
-    art.setAttribute("size", "18");
+    art.setAttribute("piece", "grand-canyon-rim");
+    art.setAttribute("look", "blocks");
+    art.setAttribute("size", String(SIZE));
     backdrop.appendChild(art);
   }
 
   function fit() {
-    const baseWidth = COLS * CELL_WIDTH * 18;
-    const baseHeight = ROWS * 18 * LINE_HEIGHT;
+    const baseWidth = COLS * CELL_WIDTH * SIZE;
+    const baseHeight = ROWS * SIZE * LINE_HEIGHT;
     const scale = Math.max(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
     backdrop.style.setProperty("--fs-ascii-scale", (scale + 0.02).toFixed(3));
   }

@@ -87,6 +87,7 @@ def render(client, actor):
             )
             .configure_legend(labelColor="#3B2A1E")
         )
+        chart = chart.configure(mark=alt.MarkConfig(tooltip=False))
         st.altair_chart(chart, width="stretch")
 
     section_header(
@@ -119,9 +120,7 @@ def render(client, actor):
                 icon=":material/save:",
             ):
                 try:
-                    client.create_bake_plan(
-                        plan_date.isoformat(), plan["product_id"], actor
-                    )
+                    client.create_bake_plan(plan_date.isoformat(), plan["product_id"], actor)
                     st.success("Draft saved")
                     st.rerun()
                 except Exception as exc:
@@ -133,12 +132,8 @@ def render(client, actor):
                 icon=":material/check_circle:",
             ):
                 try:
-                    client.create_bake_plan(
-                        plan_date.isoformat(), plan["product_id"], actor
-                    )
-                    client.approve_bake_plan(
-                        plan["product_id"], plan_date.isoformat(), actor
-                    )
+                    client.create_bake_plan(plan_date.isoformat(), plan["product_id"], actor)
+                    client.approve_bake_plan(plan["product_id"], plan_date.isoformat(), actor)
                     st.success("Bake plan approved")
                     st.rerun()
                 except Exception as exc:

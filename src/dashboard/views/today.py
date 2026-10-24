@@ -117,7 +117,7 @@ def _card(client, product, rec, actor):
             decision_html = ""
             if decision:
                 label, tone = DECISION_PILL.get(decision, (decision.title(), "slate"))
-                decision_html = f' {pill(label, tone)}'
+                decision_html = f" {pill(label, tone)}"
             st.markdown(
                 f'<div class="product-line">'
                 f'<span class="product-icon">{icon(category_icon(product.get("category")), 18)}</span>'
@@ -149,28 +149,30 @@ def _card(client, product, rec, actor):
                 f"Model: {rec.get('model_name', 'baseline')} · "
                 f"Run: {rec.get('forecast_run_id', '')[:8]}"
             )
-        approve, reject, edit = st.columns(3)
-        if approve.button(
-            "Approve",
-            key=f"approve-{product['id']}",
-            type="primary",
-            icon=":material/check_circle:",
-        ):
-            try:
-                message = _execute(client, product, rec, actor, "APPROVED")
-                _flash(message or f"{product['name']} approved")
-            except Exception as exc:
-                _flash(str(exc), "error")
-            st.rerun()
-        if reject.button("Reject", key=f"reject-{product['id']}", icon=":material/cancel:"):
-            try:
-                _execute(client, product, rec, actor, "REJECTED")
-                _flash(f"{product['name']} rejected", "warning")
-            except Exception as exc:
-                _flash(str(exc), "error")
-            st.rerun()
-        if edit.button("Edit", key=f"edit-{product['id']}", icon=":material/edit:"):
-            st.session_state[f"edit-{product['id']}"] = True
+        with st.container(key=f"quick-actions-{product['id']}"):
+            cols = st.columns([1, 1, 1, 5], gap="xxsmall")  # last col is empty filler
+            if cols[0].button(
+                "Approve",
+                key=f"approve-{product['id']}",
+                type="primary",
+                icon=":material/check_circle:",
+            ):
+                try:
+                    message = _execute(client, product, rec, actor, "APPROVED")
+                    _flash(message or f"{product['name']} approved")
+                except Exception as exc:
+                    _flash(str(exc), "error")
+                st.rerun()
+            if cols[1].button("Reject", key=f"reject-{product['id']}", icon=":material/cancel:"):
+                try:
+                    _execute(client, product, rec, actor, "REJECTED")
+                    _flash(f"{product['name']} rejected", "warning")
+                except Exception as exc:
+                    _flash(str(exc), "error")
+                st.rerun()
+            if cols[2].button("Edit", key=f"edit-button-{product['id']}", icon=":material/edit:"):
+                st.session_state[f"edit-{product['id']}"] = True
+
         if st.session_state.get(f"edit-{product['id']}"):
             with st.form(f"edit-form-{product['id']}"):
                 quantity = st.number_input(
@@ -180,17 +182,21 @@ def _card(client, product, rec, actor):
                     step=1.0,
                     key=f"qty-{product['id']}",
                 )
-                if st.form_submit_button(
+                save_col, cancel_col = st.columns(2)
+                saved = save_col.form_submit_button(
                     "Save edited decision", type="primary", icon=":material/save:"
-                ):
+                )
+                cancelled = cancel_col.form_submit_button("Cancel", icon=":material/close:")
+                if saved:
                     try:
-                        message = _execute(
-                            client, product, rec, actor, "EDITED", quantity=quantity
-                        )
+                        message = _execute(client, product, rec, actor, "EDITED", quantity=quantity)
                         _flash(message or f"{product['name']} edited")
                         st.session_state.pop(f"edit-{product['id']}", None)
                     except Exception as exc:
                         _flash(str(exc), "error")
+                    st.rerun()
+                if cancelled:
+                    st.session_state.pop(f"edit-{product['id']}", None)
                     st.rerun()
 
 
@@ -233,9 +239,7 @@ def _changed_card(events: list[dict]) -> None:
 
 
 def _simulate_sale(client, positions, actor) -> None:
-    saleable = [
-        row for row in positions if float(row["saleable_on_hand"]) >= 1
-    ]
+    saleable = [row for row in positions if float(row["saleable_on_hand"]) >= 1]
     if not saleable:
         st.button(
             "Simulate a sale",
@@ -301,20 +305,12 @@ def _live_body(client, actor):
     st.session_state["live_data_version"] = version
 
     _show_flash()
-    _live_strip(version, timezone_name)
+
     if changed:
         _changed_card(new_events)
+
     readiness_card(readiness)
-    quick_left, quick_middle, quick_right = st.columns(3)
-    if quick_left.button("Print daily sheet", key="today-print-sheet", icon=":material/print:"):
-        st.session_state.page = "Daily sheet"
-        st.rerun()
-    if quick_middle.button("Purchase orders", key="today-purchasing", icon=":material/shopping_basket:"):
-        st.session_state.page = "Purchasing"
-        st.rerun()
-    if quick_right.button("Bake plan", key="today-bakery", icon=":material/bakery_dining:"):
-        st.session_state.page = "Bakery"
-        st.rerun()
+
     action = readiness.get("next_action", {})
     if action.get("page") and action["page"] != "Today":
         if st.button(
@@ -325,6 +321,7 @@ def _live_body(client, actor):
         ):
             st.session_state.page = action["page"]
             st.rerun()
+
     _simulate_sale(client, positions, actor)
     st.caption(
         "Forecasts need history. Stockout-censored days are excluded from training, "
@@ -384,6 +381,20 @@ def _live_body(client, actor):
         ],
     )
 
+    with st.container(key="quick-actions"):
+        cols = st.columns([1, 1, 1, 5], gap="xxsmall")  # last col is empty filler
+        if cols[0].button("Print daily sheet", key="today-print-sheet", icon=":material/print:"):
+            st.session_state.page = "Daily sheet"
+            st.rerun()
+        if cols[1].button(
+            "Purchase orders", key="today-purchasing", icon=":material/shopping_basket:"
+        ):
+            st.session_state.page = "Purchasing"
+            st.rerun()
+        if cols[2].button("Bake plan", key="today-bakery", icon=":material/bakery_dining:"):
+            st.session_state.page = "Bakery"
+            st.rerun()
+
     ticker_items = []
     for rec in recommendations[:8]:
         product = products.get(rec["product_id"])
@@ -397,6 +408,8 @@ def _live_body(client, actor):
     ticker(ticker_items)
 
     freshness_ladder(buckets.get("totals", {}), "Shelf-life runway")
+
+    _live_strip(version, timezone_name)
 
     section_header(
         "Today's decisions",

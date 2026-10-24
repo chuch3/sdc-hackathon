@@ -26,8 +26,7 @@ def _proof_section(proof: dict) -> None:
     projection = proof["projection"]
     section_header(
         "Impact proof",
-        f"Holdout accuracy for the last {proof['window_days']} days, "
-        f"cut off {proof['cutoff']}",
+        f"Holdout accuracy for the last {proof['window_days']} days, cut off {proof['cutoff']}",
         "check",
     )
     metric_row(
@@ -104,13 +103,13 @@ def _proof_section(proof: dict) -> None:
             f"""
             <div class="status-grid">
               <div class="status-row"><span>Annualised waste</span>
-                <strong>{number(projection['annualised_waste_units'], 0)} units</strong></div>
+                <strong>{number(projection["annualised_waste_units"], 0)} units</strong></div>
               <div class="status-row"><span>Annualised donations</span>
-                <strong>{number(projection['annualised_donation_units'], 0)} units</strong></div>
+                <strong>{number(projection["annualised_donation_units"], 0)} units</strong></div>
               <div class="status-row"><span>Annualised CO2e</span>
-                <strong>{number(projection['annualised_estimated_co2e_kg'], 0)} kg</strong></div>
+                <strong>{number(projection["annualised_estimated_co2e_kg"], 0)} kg</strong></div>
               <div class="status-row"><span>Annualised meals</span>
-                <strong>{number(projection['annualised_estimated_meals'], 0)}</strong></div>
+                <strong>{number(projection["annualised_estimated_meals"], 0)}</strong></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -193,11 +192,13 @@ def render(client, actor):
                     ),
                     tooltip=["Kind", alt.Tooltip("kg:Q", format=".1f")],
                 )
-                .properties(height=250)
+                .properties(height=400)
                 .configure_view(strokeOpacity=0)
                 .configure_legend(labelColor="#3B2A1E")
             )
+            donut = donut.configure(mark=alt.MarkConfig(tooltip=False))
             st.altair_chart(donut, width="stretch")
+
         else:
             st.caption("No waste or donation recorded in this window.")
     with right:

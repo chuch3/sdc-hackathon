@@ -2,7 +2,11 @@ run = "bash scripts/run-replit.sh"
 modules = ["python-3.11"]
 
 [deployment]
-build = ["python", "-m", "pip", "install", "-r", "requirements.txt"]
+build = [
+  "bash",
+  "-c",
+  "python -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python -m pip install --no-cache-dir -r requirements.txt"
+]
 run = ["bash", "scripts/run-replit.sh"]
 deploymentTarget = "cloudrun"
 
@@ -10,6 +14,3 @@ deploymentTarget = "cloudrun"
 localPort = 8501
 externalPort = 80
 
-[[ports]]
-localPort = 8000
-externalPort = 8000

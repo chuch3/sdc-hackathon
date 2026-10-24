@@ -40,6 +40,7 @@ Perishable Food Inventory AI Recommender System
 | GitHub Repository | https://github.com/chuch3/sdc-hackathon    |
 | Replit Project    | https://replit.com/@your-username/freshstock   |
 | Live Demo         | https://freshstock.replit.app                  |
+| Render Deployment | https://sdc-dashboard.onrender.com/            |
 | RunPod Endpoint   | https://api.runpod.ai/v2/your-endpoint-id      |
 | Slide Deck        | https://example.com/slides                     |
 | Demo Video        | https://example.com/demo-video                 |
@@ -77,7 +78,7 @@ Buns at Work! is a thin decision layer that fits the SME's existing routine with
 | Backend       | Python 3.11+, FastAPI        |
 | Database      | SQLite via SQLAlchemy (Postgres-ready) |
 | AI / Compute  | Rule-based forecaster (default); optional PyTorch + MLflow challenger on RunPod (GPU) |
-| Hosting / Dev | Replit                       |
+| Hosting / Dev | Replit, Render               |
 
 
 ---

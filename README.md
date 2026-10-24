@@ -16,7 +16,9 @@ Perishable Food Inventory AI Recommender System
 
 > A data-trust decision loop for small food shops and bakeries that refuses to guess when history is missing, imports messy sales CSVs safely, and separates forecast accuracy from causal impact claims with a person approving every money or customer-affecting action.
 
-<img src="docs/image.png" alt="Dashboard" width="600">
+<p align="center">
+    <img src="docs/image.png" alt="Dashboard" width="600">
+</p>
 
 ---
 

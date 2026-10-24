@@ -384,7 +384,7 @@ The endpoint returns `q10`/`q50`/`q90` per day, a total interval, confidence, re
 
 | Name        | Role                | GitHub                                   |
 | ----------- | ------------------- | ---------------------------------------- |
-| Sean Abraham Summertan | Team Lead  | [@Deranged](https://github.com/dsc2409091 |
+| Sean Abraham Summertan | Team Lead  | [@Deranged](https://github.com/dsc2409091) |
 | Nicholas Marcel Tanjaya | Backend & Data  | [@nicho-mt](https://github.com/nicho-mt) |
 | Deven Por Tirtanadi | Forecast / Inventory | None |
 | Vincent William Wijaya | Bakery Domain       | [@chuch3](https://github.com/chuch3) |
